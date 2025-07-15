@@ -1,0 +1,256 @@
+from google.oauth2.service_account import Credentials
+import gspread
+import streamlit as st
+import datetime
+import re
+import unicodedata
+import pandas as pd
+
+# CONFIG
+import os
+import json
+
+SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
+# Leer el JSON desde variable de entorno
+creds_json = os.environ.get("GOOGLE_CREDS_JSON")
+if not creds_json:
+    raise ValueError("La variable de entorno GOOGLE_CREDS_JSON no está definida.")
+
+info = json.loads(creds_json)
+creds = Credentials.from_service_account_info(info, scopes=SCOPE)
+
+# Autenticación con gspread
+client = gspread.authorize(creds)
+spreadsheet = client.open("Esquema Comercial")
+hoja_clientes = spreadsheet.worksheet("CLIENTES")
+
+# Mapeo de códigos -> nombre de hoja
+mapa_asesores = {
+    "FA": "FACUNDO",
+    "FL": "FLORENCIA",
+    "AC": "AGUSTIN",
+    "R": "REGINA",
+    "JC": "JERONIMO"
+}
+
+def obtener_hoja_asesor(asesor):
+    hoja = spreadsheet.worksheet(asesor)
+    data = hoja.get_all_values()
+    headers = [h.strip().upper() for h in data[0]]
+    df = pd.DataFrame(data[1:], columns=headers)
+    return df
+
+# Función para normalizar nombres (mayúsculas, tildes, etc.)
+def normalizar(texto):
+    texto = texto.upper().replace(".", "").replace(",", "").strip()
+    texto = unicodedata.normalize('NFD', texto).encode('ascii', 'ignore').decode('utf-8')
+    return texto
+
+# Detección automática de tipo de contacto
+def detectar_tipo(frase):
+    frase = frase.lower()
+    if any(p in frase for p in ["llamé a", "llame a", "me comuniqué con", "se llamó a", "hable con", "hable a", "se hablo con"]):
+        return "LLAMADA"
+    elif any(p in frase for p in ["le escribi a", "chatee con", "cheteé con", "envie un whatsapp a"]):
+        return "MENSAJES"
+    elif any(p in frase for p in ["me reuni con", "me junte con", "estuve con", "tuve un zoom con", "visite a", "tuve un meet con"]):
+        return "REUNION"
+    else:
+        return "CONTACTO"
+
+# Parsear la frase principal
+def extraer_datos(frase):
+    frase_normalizada = normalizar(frase)
+    patron = r"(?:se hablo con|llame a|me comunique con|chatee con|le escribi a|me reuni con|visite a|estuve con|tuve un zoom con|tuve un meet con) ([A-Z\s]+) EL (\d{1,2}/\d{1,2}/\d{4}) POR (.+)"
+    coincidencias = re.findall(patron, frase_normalizada, re.IGNORECASE)
+    if coincidencias:
+        cliente, fecha_str, motivo = coincidencias[0]
+        fecha_contacto = datetime.datetime.strptime(fecha_str.strip(), "%d/%m/%Y").strftime("%d/%m/%Y")
+        return normalizar(cliente), fecha_contacto, motivo.strip()
+    else:
+        raise ValueError("No se pudo interpretar la frase. Usá el formato sugerido.")
+
+# Buscar posibles coincidencias
+def buscar_clientes_similares(cliente_input):
+    nombres = hoja_clientes.col_values(1)
+    partes_input = normalizar(cliente_input).split()
+    coincidencias = []
+
+    for i, nombre in enumerate(nombres, start=1):
+        partes_nombre = normalizar(nombre).split()
+        if all(p in partes_nombre for p in partes_input):
+            coincidencias.append((i, nombre))
+
+    return coincidencias
+
+# Procesar contacto
+def procesar_contacto(cliente_real, fila_cliente, frase, estado, proximo_contacto, nota):
+    _, fecha_contacto, detalle = extraer_datos(frase)
+
+    codigo_asesor = hoja_clientes.cell(fila_cliente, 2).value.strip()
+    hoja_nombre = mapa_asesores.get(codigo_asesor)
+    if not hoja_nombre:
+        raise ValueError(f"El cliente '{cliente_real}' no tiene un asesor válido asignado.")
+
+    hoja_destino = spreadsheet.worksheet(hoja_nombre)
+    data = hoja_destino.get_all_records()
+
+    fila_index = None
+    for i, fila in enumerate(data, start=2):
+        if normalizar(fila["CLIENTE"]) == normalizar(cliente_real):
+            fila_index = i
+            break
+
+    tipo = detectar_tipo(frase)
+
+    if fila_index:
+        hoja_destino.update_cell(fila_index, 2, tipo)
+        hoja_destino.update_cell(fila_index, 3, detalle)
+        hoja_destino.update_cell(fila_index, 4, fecha_contacto)
+        hoja_destino.update_cell(fila_index, 5, estado)
+        hoja_destino.update_cell(fila_index, 6, nota if nota else "-")
+        hoja_destino.update_cell(fila_index, 7, proximo_contacto if proximo_contacto else "")
+    else:
+        hoja_destino.append_row([
+            cliente_real, tipo, detalle, fecha_contacto, estado,
+            nota if nota else "-", proximo_contacto if proximo_contacto else ""
+        ])
+    return hoja_nombre
+
+# STREAMLIT
+st.title("📋 Registro de Contactos Comerciales")
+
+frase = st.text_input("📝 Escribí el contacto realizado:", placeholder="Ej: Se habló con Lavaque el 10/7/2025 por revisión de cartera")
+estado = st.selectbox("📌 Estado del contacto:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"])
+
+agendar = st.radio("📅 ¿Querés agendar un próximo contacto?", ["No", "Sí"])
+proximo_contacto = ""
+if agendar == "Sí":
+    fecha_proxima = st.date_input("🗓️ ¿Cuándo sería el próximo contacto?", format="YYYY/MM/DD")
+    proximo_contacto = fecha_proxima.strftime("%d/%m/%Y")
+
+nota = st.text_input("🗒️ ¿Querés agregar una nota?", placeholder="Ej: seguimiento de bonos")
+
+# Estado temporal
+for key in ["coincidencias", "cliente_input", "frase_guardada", "proximo_contacto_guardado", "nota_guardada", "estado_guardado", "hoja_registro_final"]:
+    if key not in st.session_state:
+        st.session_state[key] = [] if key == "coincidencias" else ""
+
+if st.button("Actualizar contacto"):
+    try:
+        cliente_input, _, _ = extraer_datos(frase)
+        coincidencias = buscar_clientes_similares(cliente_input)
+
+        if len(coincidencias) == 0:
+            st.error(f"⚠️ No se encontró ningún cliente similar a '{cliente_input}'.")
+        elif len(coincidencias) == 1:
+            fila, cliente_real = coincidencias[0]
+            hoja_registro = procesar_contacto(cliente_real, fila, frase, estado, proximo_contacto, nota)
+            st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
+            st.session_state.cliente_input = cliente_real 
+            st.session_state.hoja_registro_final = hoja_registro
+        else:
+            st.session_state.coincidencias = coincidencias
+            st.session_state.cliente_input = cliente_input
+            st.session_state.frase_guardada = frase
+            st.session_state.proximo_contacto_guardado = proximo_contacto
+            st.session_state.nota_guardada = nota
+            st.session_state.estado_guardado = estado
+
+    except Exception as e:
+        st.error(f"⚠️ Error procesando la frase: {str(e)}")
+
+if st.session_state.coincidencias:
+    opciones = [nombre for _, nombre in st.session_state.coincidencias]
+    seleccion = st.selectbox("❗Se encontraron varios clientes, elegí el correcto:", opciones)
+if st.button("Confirmar cliente"):
+    fila_cliente = next(fila for fila, nombre in st.session_state.coincidencias if nombre == seleccion)
+    hoja_registro = procesar_contacto(
+        seleccion,
+        fila_cliente,
+        st.session_state.frase_guardada,
+        st.session_state.estado_guardado,
+        st.session_state.proximo_contacto_guardado,
+        st.session_state.nota_guardada
+    )
+
+    st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
+
+    # 🔍 Mostramos qué cliente se está guardando
+    st.write(f"🧍 Cliente cargado en historial: **{seleccion}**")
+
+    # ✅ Guardamos correctamente para el historial
+    st.session_state.hoja_registro_final = hoja_registro
+    st.session_state.cliente_input = seleccion 
+    st.session_state.coincidencias = []
+    
+    # ✅ También actualizamos el historial
+    nuevo_registro = {
+        "Cliente": seleccion,
+        "Detalle": st.session_state.frase_guardada,
+        "Fecha": datetime.datetime.now().strftime("%d/%m/%Y"),
+        "Estado": st.session_state.estado_guardado,
+        "Nota": st.session_state.nota_guardada,
+        "Próximo contacto": st.session_state.proximo_contacto_guardado,
+        "Asesor": hoja_registro
+    }
+    st.session_state.historial.insert(0, nuevo_registro)
+    st.session_state.historial = st.session_state.historial[:90]
+     
+# Historial de registros recientes
+if "historial" not in st.session_state:
+    st.session_state.historial = []
+
+if st.session_state.hoja_registro_final:
+    nuevo_registro = {
+        "Cliente": st.session_state.cliente_input,
+        "Detalle": st.session_state.frase_guardada,
+        "Fecha": datetime.datetime.now().strftime("%d/%m/%Y"),
+        "Estado": st.session_state.estado_guardado,
+        "Nota": st.session_state.nota_guardada,
+        "Próximo contacto": st.session_state.proximo_contacto_guardado,
+        "Asesor": st.session_state.hoja_registro_final
+    }
+    st.session_state.historial.insert(0, nuevo_registro)
+    st.session_state.historial = st.session_state.historial[:90]
+    st.session_state.hoja_registro_final = ""  # ✅ Evita duplicaciones en el rerun
+
+if st.session_state.historial:
+    st.subheader("📂 Historial reciente de cargas")
+    df_historial = pd.DataFrame.from_records(st.session_state.historial)
+    st.dataframe(df_historial, use_container_width=True)
+
+# ----------------- FILTROS Y DESCARGAS AVANZADAS -------------------
+
+# FILTRO POR CLIENTE
+st.subheader("🔍 Filtros sobre el historial")
+clientes_disponibles = sorted(set([h["Cliente"] for h in st.session_state.historial]))
+cliente_seleccionado = st.selectbox("Filtrar historial por cliente", options=["Todos"] + clientes_disponibles)
+
+if cliente_seleccionado != "Todos":
+    historial_filtrado = [r for r in st.session_state.historial if r["Cliente"] == cliente_seleccionado]
+else:
+    historial_filtrado = st.session_state.historial
+
+df_filtrado = pd.DataFrame(historial_filtrado)
+st.dataframe(df_filtrado, use_container_width=True)
+
+# MOSTRAR TODO EL HISTORIAL (SIN LIMITE DE 90)
+if st.checkbox("📖 Ver historial completo (sin límite)"):
+    st.markdown("⚠️ Esto puede tardar unos segundos si tenés muchas entradas.")
+    df_completo = pd.DataFrame(st.session_state.historial)
+    st.dataframe(df_completo, use_container_width=True)
+
+# DESCARGA DE EXCEL
+st.subheader("📥 Descargar historial completo en Excel")
+if st.button("Exportar a Excel"):
+    df_exportar = pd.DataFrame(st.session_state.historial)
+    df_exportar.to_excel("historial_completo.xlsx", index=False)
+    with open("historial_completo.xlsx", "rb") as f:
+        st.download_button(
+            label="📂 Descargar archivo Excel",
+            data=f,
+            file_name="historial_completo.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
