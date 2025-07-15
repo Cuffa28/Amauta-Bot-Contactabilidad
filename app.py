@@ -277,16 +277,3 @@ if st.checkbox("📖 Ver historial completo (sin límite)"):
     st.markdown("⚠️ Esto puede tardar unos segundos si tenés muchas entradas.")
     df_completo = pd.DataFrame(st.session_state.historial)
     st.dataframe(df_completo, use_container_width=True)
-
-# DESCARGA DE EXCEL
-st.subheader("📥 Descargar historial completo en Excel")
-if st.button("Exportar a Excel"):
-    df_exportar = pd.DataFrame(st.session_state.historial)
-    df_exportar.to_excel("historial_completo.xlsx", index=False)
-    with open("historial_completo.xlsx", "rb") as f:
-        st.download_button(
-            label="📂 Descargar archivo Excel",
-            data=f,
-            file_name="historial_completo.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
