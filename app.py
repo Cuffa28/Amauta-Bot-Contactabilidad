@@ -6,24 +6,41 @@ import re
 import unicodedata
 import pandas as pd
 
+# Autenticación básica por mail
+usuarios_autorizados = {
+    "facundo@amautainversiones.com",
+    "florencia@amautainversiones.com",
+    "jeronimo@amautainversiones.com",
+    "agustin@amautainversiones.com",
+    "regina@amautainversiones.com"
+}
+
+if "autenticado" not in st.session_state:
+    st.session_state.autenticado = False
+
+if not st.session_state.autenticado:
+    st.title("🔐 Acceso restringido")
+    mail_ingresado = st.text_input("📧 Ingresá tu mail institucional", placeholder="tuusuario@amautainversiones.com")
+
+    if st.button("Ingresar"):
+        if mail_ingresado.strip().lower() in usuarios_autorizados:
+            st.session_state.autenticado = True
+            st.experimental_rerun()
+        else:
+            st.error("❌ No estás autorizado para ingresar a esta aplicación.")
+    st.stop()
+
 # CONFIG
-import os
-import json
-
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+CREDENTIALS_FILE = "secure-stone-442214-c5-10013e15e35d.json"
+SPREADSHEET_NAME = "Esquema Comercial"
+HOJA_CLIENTES = "CLIENTES"
 
-# Leer el JSON desde variable de entorno
-creds_json = os.environ.get("GOOGLE_CREDS_JSON")
-if not creds_json:
-    raise ValueError("La variable de entorno GOOGLE_CREDS_JSON no está definida.")
-
-info = json.loads(creds_json)
-creds = Credentials.from_service_account_info(info, scopes=SCOPE)
-
-# Autenticación con gspread
+# AUTENTICACIÓN
+creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPE)
 client = gspread.authorize(creds)
-spreadsheet = client.open("Esquema Comercial")
-hoja_clientes = spreadsheet.worksheet("CLIENTES")
+spreadsheet = client.open(SPREADSHEET_NAME)
+hoja_clientes = spreadsheet.worksheet(HOJA_CLIENTES)
 
 # Mapeo de códigos -> nombre de hoja
 mapa_asesores = {
