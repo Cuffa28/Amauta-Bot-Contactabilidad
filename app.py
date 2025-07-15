@@ -210,152 +210,155 @@ def obtener_recordatorios_pendientes(mail_ingresado):
     return pendientes
 
 # STREAMLIT – Crear pestañas organizadas
-tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
+if st.session_state.get("autenticado"):
 
-# 📞 Pestaña 1: Registro de Contactos Comerciales
-with tabs[0]:
-    st.title("📋 Registro de Contactos Comerciales")
+    tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 
-    frase = st.text_input("📝 Escribí el contacto realizado:", placeholder="Ej: Se habló con Lavaque el 10/7/2025 por revisión de cartera")
-    estado = st.selectbox("📌 Estado del contacto:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"])
+    # 📞 Pestaña 1: Registro de Contactos Comerciales
+    with tabs[0]:
+        st.title("📋 Registro de Contactos Comerciales")
 
-    agendar = st.radio("📅 ¿Querés agendar un próximo contacto?", ["No", "Sí"])
-    proximo_contacto = ""
-    if agendar == "Sí":
-        fecha_proxima = st.date_input("🗓️ ¿Cuándo sería el próximo contacto?", format="YYYY/MM/DD")
-        proximo_contacto = fecha_proxima.strftime("%d/%m/%Y")
+        frase = st.text_input("📝 Escribí el contacto realizado:", placeholder="Ej: Se habló con Lavaque el 10/7/2025 por revisión de cartera")
+        estado = st.selectbox("📌 Estado del contacto:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"])
 
-    nota = st.text_input("🗒️ ¿Querés agregar una nota?", placeholder="Ej: seguimiento de bonos")
+        agendar = st.radio("📅 ¿Querés agendar un próximo contacto?", ["No", "Sí"])
+        proximo_contacto = ""
+        if agendar == "Sí":
+            fecha_proxima = st.date_input("🗓️ ¿Cuándo sería el próximo contacto?", format="YYYY/MM/DD")
+            proximo_contacto = fecha_proxima.strftime("%d/%m/%Y")
 
-    # Estado temporal
-    for key in ["coincidencias", "cliente_input", "frase_guardada", "proximo_contacto_guardado", "nota_guardada", "estado_guardado", "hoja_registro_final"]:
-        if key not in st.session_state:
-            st.session_state[key] = [] if key == "coincidencias" else ""
+        nota = st.text_input("🗒️ ¿Querés agregar una nota?", placeholder="Ej: seguimiento de bonos")
 
-    if st.button("Actualizar contacto"):
-        try:
-            cliente_input, _, _ = extraer_datos(frase)
-            coincidencias = buscar_clientes_similares(cliente_input)
+        # Estado temporal
+        for key in ["coincidencias", "cliente_input", "frase_guardada", "proximo_contacto_guardado", "nota_guardada", "estado_guardado", "hoja_registro_final"]:
+            if key not in st.session_state:
+                st.session_state[key] = [] if key == "coincidencias" else ""
 
-            if len(coincidencias) == 0:
-                st.error(f"⚠️ No se encontró ningún cliente similar a '{cliente_input}'.")
-            elif len(coincidencias) == 1:
-                fila, cliente_real = coincidencias[0]
-                hoja_registro = procesar_contacto(cliente_real, fila, frase, estado, proximo_contacto, nota)
-                st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
-                st.session_state.cliente_input = cliente_real 
-                st.session_state.hoja_registro_final = hoja_registro
-            else:
-                st.session_state.coincidencias = coincidencias
-                st.session_state.cliente_input = cliente_input
-                st.session_state.frase_guardada = frase
-                st.session_state.proximo_contacto_guardado = proximo_contacto
-                st.session_state.nota_guardada = nota
-                st.session_state.estado_guardado = estado
+        if st.button("Actualizar contacto"):
+            try:
+                cliente_input, _, _ = extraer_datos(frase)
+                coincidencias = buscar_clientes_similares(cliente_input)
 
-        except Exception as e:
-            st.error(f"⚠️ Error procesando la frase: {str(e)}")
+                if len(coincidencias) == 0:
+                    st.error(f"⚠️ No se encontró ningún cliente similar a '{cliente_input}'.")
+                elif len(coincidencias) == 1:
+                    fila, cliente_real = coincidencias[0]
+                    hoja_registro = procesar_contacto(cliente_real, fila, frase, estado, proximo_contacto, nota)
+                    st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
+                    st.session_state.cliente_input = cliente_real 
+                    st.session_state.hoja_registro_final = hoja_registro
+                else:
+                    st.session_state.coincidencias = coincidencias
+                    st.session_state.cliente_input = cliente_input
+                    st.session_state.frase_guardada = frase
+                    st.session_state.proximo_contacto_guardado = proximo_contacto
+                    st.session_state.nota_guardada = nota
+                    st.session_state.estado_guardado = estado
 
-    if st.session_state.coincidencias:
-        opciones = [nombre for _, nombre in st.session_state.coincidencias]
-        seleccion = st.selectbox("❗Se encontraron varios clientes, elegí el correcto:", opciones)
-    if st.button("Confirmar cliente"):
-        coincidencias_validas = [fila for fila, nombre in st.session_state.coincidencias if nombre == seleccion]
+            except Exception as e:
+                st.error(f"⚠️ Error procesando la frase: {str(e)}")
 
-        if coincidencias_validas:
-            fila_cliente = coincidencias_validas[0]
-            hoja_registro = procesar_contacto(
-                seleccion,
-                fila_cliente,
-                st.session_state.frase_guardada,
-                st.session_state.estado_guardado,
-                st.session_state.proximo_contacto_guardado,
-                st.session_state.nota_guardada
-            )
+        if st.session_state.coincidencias:
+            opciones = [nombre for _, nombre in st.session_state.coincidencias]
+            seleccion = st.selectbox("❗Se encontraron varios clientes, elegí el correcto:", opciones)
 
-            st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
-            st.write(f"🧍 Cliente cargado en historial: **{seleccion}**")
+            if st.button("Confirmar cliente"):
+                coincidencias_validas = [fila for fila, nombre in st.session_state.coincidencias if nombre == seleccion]
 
-            st.session_state.hoja_registro_final = hoja_registro
-            st.session_state.cliente_input = seleccion 
-            st.session_state.coincidencias = []
+                if coincidencias_validas:
+                    fila_cliente = coincidencias_validas[0]
+                    hoja_registro = procesar_contacto(
+                        seleccion,
+                        fila_cliente,
+                        st.session_state.frase_guardada,
+                        st.session_state.estado_guardado,
+                        st.session_state.proximo_contacto_guardado,
+                        st.session_state.nota_guardada
+                    )
 
+                    st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
+                    st.write(f"🧍 Cliente cargado en historial: **{seleccion}**")
+
+                    st.session_state.hoja_registro_final = hoja_registro
+                    st.session_state.cliente_input = seleccion 
+                    st.session_state.coincidencias = []
+
+                    nuevo_registro = {
+                        "Cliente": seleccion,
+                        "Detalle": st.session_state.frase_guardada,
+                        "Fecha": datetime.datetime.now().strftime("%d/%m/%Y"),
+                        "Estado": st.session_state.estado_guardado,
+                        "Nota": st.session_state.nota_guardada,
+                        "Próximo contacto": st.session_state.proximo_contacto_guardado,
+                        "Asesor": hoja_registro
+                    }
+                    st.session_state.historial.insert(0, nuevo_registro)
+                    st.session_state.historial = st.session_state.historial[:90]
+                else:
+                    st.error("❌ Error interno: no se pudo encontrar la fila del cliente seleccionado.")
+
+        # Historial de registros recientes
+        if "historial" not in st.session_state:
+            st.session_state.historial = []
+
+        if st.session_state.hoja_registro_final:
             nuevo_registro = {
-                "Cliente": seleccion,
+                "Cliente": st.session_state.cliente_input,
                 "Detalle": st.session_state.frase_guardada,
                 "Fecha": datetime.datetime.now().strftime("%d/%m/%Y"),
                 "Estado": st.session_state.estado_guardado,
                 "Nota": st.session_state.nota_guardada,
                 "Próximo contacto": st.session_state.proximo_contacto_guardado,
-                "Asesor": hoja_registro
+                "Asesor": st.session_state.hoja_registro_final
             }
             st.session_state.historial.insert(0, nuevo_registro)
             st.session_state.historial = st.session_state.historial[:90]
+            st.session_state.hoja_registro_final = ""  # ✅ Evita duplicaciones en el rerun
+
+        if st.session_state.historial:
+            st.subheader("📂 Historial reciente de cargas")
+            df_historial = pd.DataFrame.from_records(st.session_state.historial)
+            st.dataframe(df_historial, use_container_width=True)
+
+        # ----------------- FILTROS Y DESCARGAS AVANZADAS -------------------
+        st.subheader("🔍 Filtros sobre el historial")
+        clientes_disponibles = sorted(set([h["Cliente"] for h in st.session_state.historial]))
+        cliente_seleccionado = st.selectbox("Filtrar historial por cliente", options=["Todos"] + clientes_disponibles)
+
+        if cliente_seleccionado != "Todos":
+            historial_filtrado = [r for r in st.session_state.historial if r["Cliente"] == cliente_seleccionado]
         else:
-            st.error("❌ Error interno: no se pudo encontrar la fila del cliente seleccionado.")
+            historial_filtrado = st.session_state.historial
 
-    # Historial de registros recientes
-    if "historial" not in st.session_state:
-        st.session_state.historial = []
+        df_filtrado = pd.DataFrame(historial_filtrado)
+        st.dataframe(df_filtrado, use_container_width=True)
 
-    if st.session_state.hoja_registro_final:
-        nuevo_registro = {
-            "Cliente": st.session_state.cliente_input,
-            "Detalle": st.session_state.frase_guardada,
-            "Fecha": datetime.datetime.now().strftime("%d/%m/%Y"),
-            "Estado": st.session_state.estado_guardado,
-            "Nota": st.session_state.nota_guardada,
-            "Próximo contacto": st.session_state.proximo_contacto_guardado,
-            "Asesor": st.session_state.hoja_registro_final
-        }
-        st.session_state.historial.insert(0, nuevo_registro)
-        st.session_state.historial = st.session_state.historial[:90]
-        st.session_state.hoja_registro_final = ""  # ✅ Evita duplicaciones en el rerun
+        if st.checkbox("📖 Ver historial completo (sin límite)"):
+            st.markdown("⚠️ Esto puede tardar unos segundos si tenés muchas entradas.")
+            df_completo = pd.DataFrame(st.session_state.historial)
+            st.dataframe(df_completo, use_container_width=True)
 
-    if st.session_state.historial:
-        st.subheader("📂 Historial reciente de cargas")
-        df_historial = pd.DataFrame.from_records(st.session_state.historial)
-        st.dataframe(df_historial, use_container_width=True)
+    # 📅 Pestaña 2: Recordatorios Pendientes
+    with tabs[1]:
+        st.title("📅 Recordatorios Pendientes")
 
-    # ----------------- FILTROS Y DESCARGAS AVANZADAS -------------------
-    st.subheader("🔍 Filtros sobre el historial")
-    clientes_disponibles = sorted(set([h["Cliente"] for h in st.session_state.historial]))
-    cliente_seleccionado = st.selectbox("Filtrar historial por cliente", options=["Todos"] + clientes_disponibles)
+        if "mail_ingresado" in st.session_state:
+            recordatorios = obtener_recordatorios_pendientes(st.session_state.mail_ingresado)
+        else:
+            recordatorios = []
 
-    if cliente_seleccionado != "Todos":
-        historial_filtrado = [r for r in st.session_state.historial if r["Cliente"] == cliente_seleccionado]
-    else:
-        historial_filtrado = st.session_state.historial
+        if recordatorios:
+            st.subheader("📣 Contactos a seguir")
+            for i, (cliente, asesor, fecha, detalle, tipo) in enumerate(recordatorios):
+                icono = "🔴" if tipo == "vencido" else "🟡"
+                col1, col2 = st.columns([5, 1])
 
-    df_filtrado = pd.DataFrame(historial_filtrado)
-    st.dataframe(df_filtrado, use_container_width=True)
-
-    if st.checkbox("📖 Ver historial completo (sin límite)"):
-        st.markdown("⚠️ Esto puede tardar unos segundos si tenés muchas entradas.")
-        df_completo = pd.DataFrame(st.session_state.historial)
-        st.dataframe(df_completo, use_container_width=True)
-
-# 📅 Pestaña 2: Recordatorios Pendientes
-with tabs[1]:
-    st.title("📅 Recordatorios Pendientes")
-
-    if "mail_ingresado" in st.session_state:
-        recordatorios = obtener_recordatorios_pendientes(st.session_state.mail_ingresado)
-    else:
-        recordatorios = []
-
-    if recordatorios:
-        st.subheader("📣 Contactos a seguir")
-        for i, (cliente, asesor, fecha, detalle, tipo) in enumerate(recordatorios):
-            icono = "🔴" if tipo == "vencido" else "🟡"
-            col1, col2 = st.columns([5, 1])
-
-            with col1:
-                st.markdown(f"{icono} **{cliente}** (Asesor: {asesor}) – contacto para **{fecha}**. _Motivo_: {detalle or '-sin info-'}")
-            with col2:
-                if st.button("✔️ Hecho", key=f"hecho_{i}"):
-                    marcar_contacto_como_hecho(cliente, asesor)
-                    st.experimental_rerun()
-    else:
-        st.success("🎉 No hay contactos pendientes. ¡Buen trabajo!")
+                with col1:
+                    st.markdown(f"{icono} **{cliente}** (Asesor: {asesor}) – contacto para **{fecha}**. _Motivo_: {detalle or '-sin info-'}")
+                with col2:
+                    if st.button("✔️ Hecho", key=f"hecho_{i}"):
+                        marcar_contacto_como_hecho(cliente, asesor)
+                        st.experimental_rerun()
+        else:
+            st.success("🎉 No hay contactos pendientes. ¡Buen trabajo!")
 
