@@ -51,6 +51,7 @@ hoja_clientes = spreadsheet.worksheet("CLIENTES")
 
 # 🔔 Mostrar alertas si hay recordatorios pendientes
 recordatorios = obtener_recordatorios_pendientes()
+st.write("🔍 DEBUG: Recordatorios encontrados:", recordatorios)
 if recordatorios:
     st.warning("📣 ¡Tienes contactos pendientes de seguimiento!")
     for cliente, asesor, fecha, detalle, tipo in recordatorios:
