@@ -368,7 +368,7 @@ with tabs[1]:
                             marcar_contacto_como_hecho(cliente, asesor)
                             fila_container.empty()  # 🔥 Hace desaparecer la fila visualmente
                             st.success(f"✅ {cliente} marcado como hecho")
-                            st.experimental_rerun()
+                            st.rerun()
                         except Exception as e:
                             st.error(f"⚠️ Error al marcar como hecho: {e}")
     else:
