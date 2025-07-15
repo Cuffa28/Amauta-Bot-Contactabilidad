@@ -49,18 +49,6 @@ client = gspread.authorize(creds)
 spreadsheet = client.open("Esquema Comercial")
 hoja_clientes = spreadsheet.worksheet("CLIENTES")
 
-# 🔔 Mostrar alertas si hay recordatorios pendientes
-recordatorios = obtener_recordatorios_pendientes()
-st.write("🔍 DEBUG: Recordatorios encontrados:", recordatorios)
-if recordatorios:
-    st.warning("📣 ¡Tienes contactos pendientes de seguimiento!")
-    for cliente, asesor, fecha, detalle, tipo in recordatorios:
-        if tipo == "vencido":
-            icono = "🔴"
-        else:
-            icono = "🟡"
-        st.markdown(f"{icono} **{cliente}** (Asesor: {asesor}) – contacto para **{fecha}**. _Motivo_: {detalle}")
-
 # Mapeo de códigos -> nombre de hoja
 mapa_asesores = {
     "FA": "FACUNDO",
@@ -193,6 +181,18 @@ def obtener_recordatorios_pendientes():
                 except ValueError:
                     continue
     return pendientes
+
+# 🔔 Mostrar alertas si hay recordatorios pendientes
+recordatorios = obtener_recordatorios_pendientes()
+st.write("🔍 DEBUG: Recordatorios encontrados:", recordatorios)
+if recordatorios:
+    st.warning("📣 ¡Tienes contactos pendientes de seguimiento!")
+    for cliente, asesor, fecha, detalle, tipo in recordatorios:
+        if tipo == "vencido":
+            icono = "🔴"
+        else:
+            icono = "🟡"
+        st.markdown(f"{icono} **{cliente}** (Asesor: {asesor}) – contacto para **{fecha}**. _Motivo_: {detalle}")
 
 # STREAMLIT
 st.title("📋 Registro de Contactos Comerciales")
