@@ -168,23 +168,24 @@ def obtener_recordatorios_pendientes():
     proximos_dias = hoy + datetime.timedelta(days=3)
     pendientes = []
 
-# Obtener código del asesor logueado
-mail = mail_ingresado.strip().lower()
-asesor_codigo = None
+    # Obtener código del asesor logueado
+    mail = mail_ingresado.strip().lower()
+    asesor_codigo = None
 
-if "facundo" in mail:
-    asesor_codigo = "FACUNDO"
-elif "florencia" in mail:
-    asesor_codigo = "FLORENCIA"
-elif "jeronimo" in mail:
-    asesor_codigo = "JERONIMO"
-elif "agustin" in mail:
-    asesor_codigo = "AGUSTIN"
-elif "regina" in mail:
-    asesor_codigo = "REGINA"
-    
+    if "facundo" in mail:
+        asesor_codigo = "FACUNDO"
+    elif "florencia" in mail:
+        asesor_codigo = "FLORENCIA"
+    elif "jeronimo" in mail:
+        asesor_codigo = "JERONIMO"
+    elif "agustin" in mail:
+        asesor_codigo = "AGUSTIN"
+    elif "regina" in mail:
+        asesor_codigo = "REGINA"
+
     asesores_a_buscar = [asesor_codigo] if asesor_codigo else mapa_asesores.values()
-for asesor in asesores_a_buscar:
+
+    for asesor in asesores_a_buscar:
         hoja = spreadsheet.worksheet(asesor)
         data = hoja.get_all_records()
         for fila in data:
@@ -193,18 +194,17 @@ for asesor in asesores_a_buscar:
             if fecha_str:
                 try:
                     fecha = datetime.datetime.strptime(fecha_str.strip(), "%d/%m/%Y").date()
-                    detalle = fila.get("DETALLE", "")
-
+                    detalle = fila.get("DETALLE", "-sin info-")
                     if fecha < hoy:
                         tipo = "vencido"
                     elif fecha <= proximos_dias:
                         tipo = "proximo"
                     else:
                         continue
-
                     pendientes.append((cliente, asesor, fecha_str, detalle, tipo))
                 except ValueError:
                     continue
+
     return pendientes
 
 # STREAMLIT – Crear pestañas organizadas
