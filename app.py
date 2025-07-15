@@ -7,13 +7,13 @@ import unicodedata
 import pandas as pd
 
 # Autenticación básica por mail
-usuarios_autorizados = {
+usuarios_autorizados = [
     "facundo@amautainversiones.com",
     "florencia@amautainversiones.com",
     "jeronimo@amautainversiones.com",
     "agustin@amautainversiones.com",
     "regina@amautainversiones.com"
-}
+]
 
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
