@@ -23,10 +23,11 @@ if not st.session_state.autenticado:
     mail_ingresado = st.text_input("📧 Ingresá tu mail institucional", placeholder="tuusuario@amautainversiones.com")
 
     if st.button("Ingresar"):
-        if mail_ingresado.strip().lower() in usuarios_autorizados:
+if mail_ingresado.strip().lower() in usuarios_autorizados:
     st.session_state.autenticado = True
     st.session_state.mail_ingresado = mail_ingresado.strip().lower()
     st.rerun()
+
         else:
             st.error("❌ No estás autorizado para ingresar a esta aplicación.")
     st.stop()
