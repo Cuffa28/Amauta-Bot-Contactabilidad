@@ -182,17 +182,6 @@ def obtener_recordatorios_pendientes():
                     continue
     return pendientes
 
-# 🔔 Mostrar alertas si hay recordatorios pendientes
-recordatorios = obtener_recordatorios_pendientes()
-if recordatorios:
-    st.warning("📣 ¡Tienes contactos pendientes de seguimiento!")
-    for cliente, asesor, fecha, detalle, tipo in recordatorios:
-        if tipo == "vencido":
-            icono = "🔴"
-        else:
-            icono = "🟡"
-        st.markdown(f"{icono} **{cliente}** (Asesor: {asesor}) – contacto para **{fecha}**. _Motivo_: {detalle}")
-
 # STREAMLIT – Crear pestañas organizadas
 tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 
