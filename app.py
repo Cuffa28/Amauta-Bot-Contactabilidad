@@ -167,11 +167,12 @@ def obtener_recordatorios_pendientes():
     hoy = datetime.datetime.now().date()
     proximos_dias = hoy + datetime.timedelta(days=3)
     pendientes = []
-    
+
 # Obtener código del asesor logueado
-    mail = mail_ingresado.strip().lower()
-    asesor_codigo = None
-    if "facundo" in mail:
+mail = mail_ingresado.strip().lower()
+asesor_codigo = None
+
+if "facundo" in mail:
     asesor_codigo = "FACUNDO"
 elif "florencia" in mail:
     asesor_codigo = "FLORENCIA"
@@ -181,7 +182,7 @@ elif "agustin" in mail:
     asesor_codigo = "AGUSTIN"
 elif "regina" in mail:
     asesor_codigo = "REGINA"
-
+    
     asesores_a_buscar = [asesor_codigo] if asesor_codigo else mapa_asesores.values()
 for asesor in asesores_a_buscar:
         hoja = spreadsheet.worksheet(asesor)
