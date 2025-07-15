@@ -153,13 +153,37 @@ def procesar_contacto(cliente_real, fila_cliente, frase, estado, proximo_contact
         ])
     return hoja_nombre
 
+def marcar_contacto_como_hecho(cliente, asesor):
+    hoja = spreadsheet.worksheet(asesor)
+    data = hoja.get_all_records()
+    for i, fila in enumerate(data, start=2):  # Empieza en fila 2 (con encabezado)
+        if normalizar(fila.get("CLIENTE", "")) == normalizar(cliente):
+            hoja.update_cell(i, 5, "Hecho")       # Estado
+            hoja.update_cell(i, 7, "")            # Limpiar Próximo Contacto
+            break
+
 # Función para recordatorios de contactos vencidos
 def obtener_recordatorios_pendientes():
     hoy = datetime.datetime.now().date()
     proximos_dias = hoy + datetime.timedelta(days=3)
     pendientes = []
+    
+# Obtener código del asesor logueado
+    mail = mail_ingresado.strip().lower()
+    asesor_codigo = None
+    if "facundo" in mail:
+    asesor_codigo = "FACUNDO"
+elif "florencia" in mail:
+    asesor_codigo = "FLORENCIA"
+elif "jeronimo" in mail:
+    asesor_codigo = "JERONIMO"
+elif "agustin" in mail:
+    asesor_codigo = "AGUSTIN"
+elif "regina" in mail:
+    asesor_codigo = "REGINA"
 
-    for asesor in mapa_asesores.values():
+    asesores_a_buscar = [asesor_codigo] if asesor_codigo else mapa_asesores.values()
+for asesor in asesores_a_buscar:
         hoja = spreadsheet.worksheet(asesor)
         data = hoja.get_all_records()
         for fila in data:
@@ -314,8 +338,16 @@ with tabs[1]:
     recordatorios = obtener_recordatorios_pendientes()
     if recordatorios:
         st.subheader("📣 Contactos a seguir")
-        for cliente, asesor, fecha, detalle, tipo in recordatorios:
-            icono = "🔴" if tipo == "vencido" else "🟡"
-            st.markdown(f"{icono} **{cliente}** (Asesor: {asesor}) – contacto para **{fecha}**. _Motivo_: {detalle}")
+        for i, (cliente, asesor, fecha, detalle, tipo) in enumerate(recordatorios):
+    icono = "🔴" if tipo == "vencido" else "🟡"
+    col1, col2 = st.columns([5, 1])
+    
+    with col1:
+        st.markdown(f"{icono} **{cliente}** (Asesor: {asesor}) – contacto para **{fecha}**. _Motivo_: {detalle or '-sin info-'}")
+        
+    with col2:
+        if st.button("✔️ Hecho", key=f"hecho_{i}"):
+            marcar_contacto_como_hecho(cliente, asesor)
+            st.experimental_rerun()
     else:
         st.success("🎉 No hay contactos pendientes. ¡Buen trabajo!")
