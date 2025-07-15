@@ -25,7 +25,7 @@ if not st.session_state.autenticado:
     if st.button("Ingresar"):
         if mail_ingresado.strip().lower() in usuarios_autorizados:
             st.session_state.autenticado = True
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("❌ No estás autorizado para ingresar a esta aplicación.")
     st.stop()
