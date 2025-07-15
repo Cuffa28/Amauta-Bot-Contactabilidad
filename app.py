@@ -358,13 +358,13 @@ if st.session_state.get("autenticado"):
 
                 with col1:
                     st.markdown(f"{icono} **{cliente}** (Asesor: {asesor}) – contacto para **{fecha}**. _Motivo_: {detalle or '-sin info-'}")
-                with col2:
-    if st.button("✔️ Hecho", key=f"hecho_{i}"):
-        try:
-            marcar_contacto_como_hecho(cliente, asesor)
-            st.experimental_rerun()
-        except Exception as e:
-            st.error(f"⚠️ Error al marcar como hecho: {e}")
+    with col2:
+        if st.button("✔️ Hecho", key=f"hecho_{i}"):
+            try:
+                marcar_contacto_como_hecho(cliente, asesor)
+                st.experimental_rerun()
+            except Exception as e:
+                st.error(f"⚠️ Error al marcar como hecho: {e}")
             
         else:
             st.success("🎉 No hay contactos pendientes. ¡Buen trabajo!")
