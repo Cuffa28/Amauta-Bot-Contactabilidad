@@ -24,8 +24,9 @@ if not st.session_state.autenticado:
 
     if st.button("Ingresar"):
         if mail_ingresado.strip().lower() in usuarios_autorizados:
-            st.session_state.autenticado = True
-            st.rerun()
+    st.session_state.autenticado = True
+    st.session_state.mail_ingresado = mail_ingresado.strip().lower()
+    st.rerun()
         else:
             st.error("❌ No estás autorizado para ingresar a esta aplicación.")
     st.stop()
@@ -336,7 +337,7 @@ with tabs[0]:
 # 📅 Pestaña 2: Recordatorios Pendientes
 with tabs[1]:
     st.title("📅 Recordatorios Pendientes")
-    recordatorios = obtener_recordatorios_pendientes(mail_ingresado)
+    recordatorios = obtener_recordatorios_pendientes(st.session_state.mail_ingresado)
 
     if recordatorios:
         st.subheader("📣 Contactos a seguir")
