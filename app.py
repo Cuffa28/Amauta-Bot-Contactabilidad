@@ -336,18 +336,20 @@ with tabs[0]:
 with tabs[1]:
     st.title("📅 Recordatorios Pendientes")
     recordatorios = obtener_recordatorios_pendientes()
+
     if recordatorios:
         st.subheader("📣 Contactos a seguir")
         for i, (cliente, asesor, fecha, detalle, tipo) in enumerate(recordatorios):
-    icono = "🔴" if tipo == "vencido" else "🟡"
-    col1, col2 = st.columns([5, 1])
-    
-    with col1:
-        st.markdown(f"{icono} **{cliente}** (Asesor: {asesor}) – contacto para **{fecha}**. _Motivo_: {detalle or '-sin info-'}")
-        
-    with col2:
-        if st.button("✔️ Hecho", key=f"hecho_{i}"):
-            marcar_contacto_como_hecho(cliente, asesor)
-            st.experimental_rerun()
+            icono = "🔴" if tipo == "vencido" else "🟡"
+            col1, col2 = st.columns([5, 1])
+            
+            with col1:
+                st.markdown(
+                    f"{icono} **{cliente}** (Asesor: {asesor}) – contacto para **{fecha}**. _Motivo_: {detalle or '-sin info-'}"
+                )
+            with col2:
+                if st.button("✔️ Hecho", key=f"hecho_{i}"):
+                    marcar_contacto_como_hecho(cliente, asesor)
+                    st.experimental_rerun()
     else:
         st.success("🎉 No hay contactos pendientes. ¡Buen trabajo!")
