@@ -31,16 +31,23 @@ if not st.session_state.autenticado:
     st.stop()
 
 # CONFIG
-SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-CREDENTIALS_FILE = "secure-stone-442214-c5-10013e15e35d.json"
-SPREADSHEET_NAME = "Esquema Comercial"
-HOJA_CLIENTES = "CLIENTES"
+import os
+import json
 
-# AUTENTICACIÓN
-creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPE)
+SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
+# Leer el JSON desde variable de entorno
+creds_json = os.environ.get("GOOGLE_CREDS_JSON")
+if not creds_json:
+    raise ValueError("La variable de entorno GOOGLE_CREDS_JSON no está definida.")
+
+info = json.loads(creds_json)
+creds = Credentials.from_service_account_info(info, scopes=SCOPE)
+
+# Autenticación con gspread
 client = gspread.authorize(creds)
-spreadsheet = client.open(SPREADSHEET_NAME)
-hoja_clientes = spreadsheet.worksheet(HOJA_CLIENTES)
+spreadsheet = client.open("Esquema Comercial")
+hoja_clientes = spreadsheet.worksheet("CLIENTES")
 
 # Mapeo de códigos -> nombre de hoja
 mapa_asesores = {
