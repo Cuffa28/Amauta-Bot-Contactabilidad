@@ -163,7 +163,7 @@ def marcar_contacto_como_hecho(cliente, asesor):
             break
 
 # Función para recordatorios de contactos vencidos
-def obtener_recordatorios_pendientes():
+def obtener_recordatorios_pendientes(mail_ingresado):
     hoy = datetime.datetime.now().date()
     proximos_dias = hoy + datetime.timedelta(days=3)
     pendientes = []
@@ -336,7 +336,7 @@ with tabs[0]:
 # 📅 Pestaña 2: Recordatorios Pendientes
 with tabs[1]:
     st.title("📅 Recordatorios Pendientes")
-    recordatorios = obtener_recordatorios_pendientes()
+    recordatorios = obtener_recordatorios_pendientes(mail_ingresado)
 
     if recordatorios:
         st.subheader("📣 Contactos a seguir")
