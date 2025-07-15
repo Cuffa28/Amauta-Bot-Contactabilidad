@@ -194,7 +194,23 @@ if recordatorios:
         st.markdown(f"{icono} **{cliente}** (Asesor: {asesor}) – contacto para **{fecha}**. _Motivo_: {detalle}")
 
 # STREAMLIT
+# STREAMLIT
 st.title("📋 Registro de Contactos Comerciales")
+
+tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
+
+with tabs[0]:
+    # Aquí va TODO tu flujo actual de contacto (inputs, botones, historial, etc.)
+
+with tabs[1]:
+    recordatorios = obtener_recordatorios_pendientes()
+    if recordatorios:
+        st.subheader("📣 Contactos a seguir")
+        for cliente, asesor, fecha, detalle, tipo in recordatorios:
+            icono = "🔴" if tipo == "vencido" else "🟡"
+            st.markdown(f"{icono} **{cliente}** (Asesor: {asesor}) – contacto para **{fecha}**. _Motivo_: {detalle}")
+    else:
+        st.success("🎉 No hay contactos pendientes. ¡Buen trabajo!")
 
 frase = st.text_input("📝 Escribí el contacto realizado:", placeholder="Ej: Se habló con Lavaque el 10/7/2025 por revisión de cartera")
 estado = st.selectbox("📌 Estado del contacto:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"])
