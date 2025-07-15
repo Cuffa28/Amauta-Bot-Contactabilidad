@@ -103,7 +103,7 @@ def buscar_clientes_similares(cliente_input):
 
     for i, nombre in enumerate(nombres, start=1):
         partes_nombre = normalizar(nombre).split()
-        if all(p in partes_nombre for p in partes_input):
+        if any(p in parte for p in partes_input for parte in partes_nombre):
             coincidencias.append((i, nombre))
 
     return coincidencias
@@ -189,38 +189,39 @@ if st.session_state.coincidencias:
     opciones = [nombre for _, nombre in st.session_state.coincidencias]
     seleccion = st.selectbox("❗Se encontraron varios clientes, elegí el correcto:", opciones)
 if st.button("Confirmar cliente"):
-    fila_cliente = next(fila for fila, nombre in st.session_state.coincidencias if nombre == seleccion)
-    hoja_registro = procesar_contacto(
-        seleccion,
-        fila_cliente,
-        st.session_state.frase_guardada,
-        st.session_state.estado_guardado,
-        st.session_state.proximo_contacto_guardado,
-        st.session_state.nota_guardada
-    )
-
-    st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
-
-    # 🔍 Mostramos qué cliente se está guardando
-    st.write(f"🧍 Cliente cargado en historial: **{seleccion}**")
-
-    # ✅ Guardamos correctamente para el historial
-    st.session_state.hoja_registro_final = hoja_registro
-    st.session_state.cliente_input = seleccion 
-    st.session_state.coincidencias = []
+    coincidencias_validas = [fila for fila, nombre in st.session_state.coincidencias if nombre == seleccion]
     
-    # ✅ También actualizamos el historial
-    nuevo_registro = {
-        "Cliente": seleccion,
-        "Detalle": st.session_state.frase_guardada,
-        "Fecha": datetime.datetime.now().strftime("%d/%m/%Y"),
-        "Estado": st.session_state.estado_guardado,
-        "Nota": st.session_state.nota_guardada,
-        "Próximo contacto": st.session_state.proximo_contacto_guardado,
-        "Asesor": hoja_registro
-    }
-    st.session_state.historial.insert(0, nuevo_registro)
-    st.session_state.historial = st.session_state.historial[:90]
+    if coincidencias_validas:
+        fila_cliente = coincidencias_validas[0]
+        hoja_registro = procesar_contacto(
+            seleccion,
+            fila_cliente,
+            st.session_state.frase_guardada,
+            st.session_state.estado_guardado,
+            st.session_state.proximo_contacto_guardado,
+            st.session_state.nota_guardada
+        )
+
+        st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
+        st.write(f"🧍 Cliente cargado en historial: **{seleccion}**")
+
+        st.session_state.hoja_registro_final = hoja_registro
+        st.session_state.cliente_input = seleccion 
+        st.session_state.coincidencias = []
+
+        nuevo_registro = {
+            "Cliente": seleccion,
+            "Detalle": st.session_state.frase_guardada,
+            "Fecha": datetime.datetime.now().strftime("%d/%m/%Y"),
+            "Estado": st.session_state.estado_guardado,
+            "Nota": st.session_state.nota_guardada,
+            "Próximo contacto": st.session_state.proximo_contacto_guardado,
+            "Asesor": hoja_registro
+        }
+        st.session_state.historial.insert(0, nuevo_registro)
+        st.session_state.historial = st.session_state.historial[:90]
+    else:
+        st.error("❌ Error interno: no se pudo encontrar la fila del cliente seleccionado.")
      
 # Historial de registros recientes
 if "historial" not in st.session_state:
