@@ -18,17 +18,20 @@ usuarios_autorizados = [
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
 
+if "autenticado" not in st.session_state:
+    st.session_state.autenticado = False
+
 if not st.session_state.autenticado:
     st.title("🔐 Acceso restringido")
     mail_ingresado = st.text_input("📧 Ingresá tu mail institucional", placeholder="tuusuario@amautainversiones.com")
 
-if st.button("Ingresar"):
-    if mail_ingresado.strip().lower() in usuarios_autorizados:
-        st.session_state.autenticado = True
-        st.session_state.mail_ingresado = mail_ingresado.strip().lower()
-        st.rerun()
-    else:
-        st.error("❌ No estás autorizado para ingresar a esta aplicación.")
+    if st.button("Ingresar"):
+        if mail_ingresado.strip().lower() in usuarios_autorizados:
+            st.session_state.autenticado = True
+            st.session_state.mail_ingresado = mail_ingresado.strip().lower()
+            st.rerun()
+        else:
+            st.error("❌ No estás autorizado para ingresar a esta aplicación.")
 
     st.stop()
 
