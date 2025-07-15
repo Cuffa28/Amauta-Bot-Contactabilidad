@@ -49,6 +49,17 @@ client = gspread.authorize(creds)
 spreadsheet = client.open("Esquema Comercial")
 hoja_clientes = spreadsheet.worksheet("CLIENTES")
 
+# 🔔 Mostrar alertas si hay recordatorios pendientes
+recordatorios = obtener_recordatorios_pendientes()
+if recordatorios:
+    st.warning("📣 ¡Tienes contactos pendientes de seguimiento!")
+    for cliente, asesor, fecha, detalle, tipo in recordatorios:
+        if tipo == "vencido":
+            icono = "🔴"
+        else:
+            icono = "🟡"
+        st.markdown(f"{icono} **{cliente}** (Asesor: {asesor}) – contacto para **{fecha}**. _Motivo_: {detalle}")
+
 # Mapeo de códigos -> nombre de hoja
 mapa_asesores = {
     "FA": "FACUNDO",
@@ -152,6 +163,35 @@ def procesar_contacto(cliente_real, fila_cliente, frase, estado, proximo_contact
             nota if nota else "-", proximo_contacto if proximo_contacto else ""
         ])
     return hoja_nombre
+
+# Función para recordatorios de contactos vencidos
+def obtener_recordatorios_pendientes():
+    hoy = datetime.datetime.now().date()
+    proximos_dias = hoy + datetime.timedelta(days=3)
+    pendientes = []
+
+    for asesor in mapa_asesores.values():
+        hoja = spreadsheet.worksheet(asesor)
+        data = hoja.get_all_records()
+        for fila in data:
+            fecha_str = fila.get("PRÓXIMO CONTACTO")
+            cliente = fila.get("CLIENTE", "Sin nombre")
+            if fecha_str:
+                try:
+                    fecha = datetime.datetime.strptime(fecha_str.strip(), "%d/%m/%Y").date()
+                    detalle = fila.get("DETALLE", "")
+
+                    if fecha < hoy:
+                        tipo = "vencido"
+                    elif fecha <= proximos_dias:
+                        tipo = "proximo"
+                    else:
+                        continue
+
+                    pendientes.append((cliente, asesor, fecha_str, detalle, tipo))
+                except ValueError:
+                    continue
+    return pendientes
 
 # STREAMLIT
 st.title("📋 Registro de Contactos Comerciales")
