@@ -98,13 +98,24 @@ def extraer_datos(frase):
 # Buscar posibles coincidencias
 def buscar_clientes_similares(cliente_input):
     nombres = hoja_clientes.col_values(1)
-    partes_input = normalizar(cliente_input).split()
+    cliente_input_normalizado = normalizar(cliente_input)
+    partes_input = cliente_input_normalizado.split()
     coincidencias = []
 
     for i, nombre in enumerate(nombres, start=1):
-        partes_nombre = normalizar(nombre).split()
-        if any(p in parte for p in partes_input for parte in partes_nombre):
-            coincidencias.append((i, nombre))
+        nombre_normalizado = normalizar(nombre)
+        partes_nombre = nombre_normalizado.split()
+
+        if len(partes_input) == 1:
+            # Input corto: aceptar si cualquier palabra coincide parcialmente
+            if any(p in parte for p in partes_input for parte in partes_nombre):
+                coincidencias.append((i, nombre))
+        else:
+            # Input más largo: coincidencia más estricta
+            match_parcial = all(p in partes_nombre for p in partes_input)
+            match_exacto = cliente_input_normalizado in nombre_normalizado
+            if match_parcial or match_exacto:
+                coincidencias.append((i, nombre))
 
     return coincidencias
 
