@@ -330,8 +330,8 @@ if st.session_state.get("autenticado"):
                         
                 guardar_en_historial(cliente_real, hoja_registro, frase, estado, nota, proximo_contacto)
                     
-                else:
-                    st.error("❌ Error interno: no se pudo encontrar la fila del cliente seleccionado.")
+            else:
+                st.error("❌ Error interno: no se pudo encontrar la fila del cliente seleccionado.")
 
         # Historial de registros recientes
         if "historial" not in st.session_state:
