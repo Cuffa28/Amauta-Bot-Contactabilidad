@@ -293,9 +293,16 @@ if st.session_state.get("autenticado"):
                     st.session_state.cliente_input = seleccion 
                     st.session_state.coincidencias = []
 
+                    detalle_actual = st.session_state.frase_guardada
+                    try:
+                        cliente_nombre, fecha_detalle, motivo = extraer_datos(detalle_actual)
+                        detalle_actual = f"{motivo} ({fecha_detalle})"
+                    except:
+                        pass  # En caso de que falle el parseo, usa lo que haya
+
                     nuevo_registro = {
                         "Cliente": seleccion,
-                        "Detalle": st.session_state.frase_guardada,
+                        "Detalle": detalle_actual,
                         "Fecha": datetime.datetime.now().strftime("%d/%m/%Y"),
                         "Estado": st.session_state.estado_guardado,
                         "Nota": st.session_state.nota_guardada,
