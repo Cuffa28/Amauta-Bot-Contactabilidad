@@ -140,7 +140,7 @@ def procesar_contacto(cliente_real, fila_cliente, frase, estado, proximo_contact
         raise ValueError(f"El cliente '{cliente_real}' no tiene un asesor válido asignado.")
 
     hoja_destino = spreadsheet.worksheet(hoja_nombre)
-    data = obtener_hoja_cacheada(hoja_nombre)
+    data = hoja_destino.get_all_records()
 
     fila_index = None
     for i, fila in enumerate(data, start=2):
