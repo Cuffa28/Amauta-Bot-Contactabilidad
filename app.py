@@ -70,6 +70,10 @@ def obtener_hoja_asesor(asesor):
     df = pd.DataFrame(data[1:], columns=headers)
     return df
 
+def obtener_hoja_clientes():
+    data = hoja_clientes.get_all_records()
+    return pd.DataFrame(data)
+
 # Función para normalizar nombres (mayúsculas, tildes, etc.)
 def normalizar(texto):
     texto = texto.upper().replace(".", "").replace(",", "").strip()
@@ -102,7 +106,8 @@ def extraer_datos(frase):
 
 # Buscar posibles coincidencias
 def buscar_clientes_similares(cliente_input):
-    nombres = hoja_clientes.col_values(1)
+    df_clientes = obtener_hoja_clientes()
+    nombres = df_clientes["CLIENTE"].tolist()
     cliente_input_normalizado = normalizar(cliente_input)
     partes_input = cliente_input_normalizado.split()
     coincidencias = []
@@ -134,7 +139,7 @@ def procesar_contacto(cliente_real, fila_cliente, frase, estado, proximo_contact
         raise ValueError(f"El cliente '{cliente_real}' no tiene un asesor válido asignado.")
 
     hoja_destino = spreadsheet.worksheet(hoja_nombre)
-    data = hoja_destino.get_all_records()
+    data = obtener_hoja_cacheada(hoja_nombre)
 
     fila_index = None
     for i, fila in enumerate(data, start=2):
@@ -246,6 +251,13 @@ if st.session_state.get("autenticado"):
         st.title("📋 Registro de Contactos Comerciales")
 
         frase = st.text_input("📝 Escribí el contacto realizado:", placeholder="Ej: Se habló con Lavaque el 10/7/2025 por revisión de cartera")
+
+        try:
+            cliente_preview, fecha_preview, motivo_preview = extraer_datos(frase)
+            st.markdown(f"📌 Se detectó: **{cliente_preview}**, fecha: **{fecha_preview}**, motivo: _{motivo_preview}_")
+        except Exception as e:
+            st.error(f"⚠️ No se pudo interpretar correctamente: {e}")
+        
         estado = st.selectbox("📌 Estado del contacto:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"])
 
         agendar = st.radio("📅 ¿Querés agendar un próximo contacto?", ["No", "Sí"])
@@ -270,21 +282,9 @@ if st.session_state.get("autenticado"):
                     st.error(f"⚠️ No se encontró ningún cliente similar a '{cliente_input}'.")
                 elif len(coincidencias) == 1:
                     fila, cliente_real = coincidencias[0]
-
-                # ✅ Guardar también los datos relevantes para el historial
-                    st.session_state.cliente_input = cliente_real 
-                    st.session_state.frase_guardada = frase
-                    st.session_state.estado_guardado = estado
-                    st.session_state.nota_guardada = nota
-                    st.session_state.proximo_contacto_guardado = proximo_contacto
-
                     hoja_registro = procesar_contacto(cliente_real, fila, frase, estado, proximo_contacto, nota)
-                    st.session_state.hoja_registro_final = hoja_registro
-
                     guardar_en_historial(cliente_real, hoja_registro, frase, estado, nota, proximo_contacto)
-
                     st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
-
                 else:
                     st.session_state.coincidencias = coincidencias
                     st.session_state.cliente_input = cliente_input
