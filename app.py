@@ -331,7 +331,7 @@ if st.session_state.get("autenticado"):
                     except:
                         pass  # En caso de que falle el parseo, usa lo que haya
                         
-                guardar_en_historial(cliente_real, hoja_registro, frase, estado, nota, proximo_contacto)
+                guardar_en_historial(seleccíon, hoja_registro, frase, estado, nota, proximo_contacto)
                     
             else:
                 st.error("❌ Error interno: no se pudo encontrar la fila del cliente seleccionado.")
