@@ -133,7 +133,8 @@ def buscar_clientes_similares(cliente_input):
 def procesar_contacto(cliente_real, fila_cliente, frase, estado, proximo_contacto, nota):
     _, fecha_contacto, detalle = extraer_datos(frase)
 
-    codigo_asesor = hoja_clientes.cell(fila_cliente, 2).value.strip()
+    df_clientes = obtener_hoja_clientes()
+    codigo_asesor = df_clientes.iloc[fila_cliente - 1]["ASESOR/A"]
     hoja_nombre = mapa_asesores.get(codigo_asesor)
     if not hoja_nombre:
         raise ValueError(f"El cliente '{cliente_real}' no tiene un asesor válido asignado.")
