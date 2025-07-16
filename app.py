@@ -246,8 +246,6 @@ if st.session_state.get("autenticado"):
                     st.error(f"⚠️ No se encontró ningún cliente similar a '{cliente_input}'.")
                 elif len(coincidencias) == 1:
                     fila, cliente_real = coincidencias[0]
-                    hoja_registro = procesar_contacto(cliente_real, fila, frase, estado, proximo_contacto, nota)
-                    st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
 
                 # ✅ Guardar también los datos relevantes para el historial
                     st.session_state.cliente_input = cliente_real 
@@ -255,7 +253,11 @@ if st.session_state.get("autenticado"):
                     st.session_state.estado_guardado = estado
                     st.session_state.nota_guardada = nota
                     st.session_state.proximo_contacto_guardado = proximo_contacto
+
+                    hoja_registro = procesar_contacto(cliente_real, fila, frase, estado, proximo_contacto, nota)
                     st.session_state.hoja_registro_final = hoja_registro
+
+                    st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
 
                 else:
                     st.session_state.coincidencias = coincidencias
@@ -299,21 +301,9 @@ if st.session_state.get("autenticado"):
                         detalle_actual = f"{motivo} ({fecha_detalle})"
                     except:
                         pass  # En caso de que falle el parseo, usa lo que haya
-
-                    nuevo_registro = {
-                        "Cliente": seleccion,
-                        "Detalle": detalle_actual,
-                        "Fecha": datetime.datetime.now().strftime("%d/%m/%Y"),
-                        "Estado": st.session_state.estado_guardado,
-                        "Nota": st.session_state.nota_guardada,
-                        "Próximo contacto": st.session_state.proximo_contacto_guardado,
-                        "Asesor": hoja_registro
-                    }
-                    if st.session_state.historial and st.session_state.historial[0]["Cliente"] == seleccion and st.session_state.historial[0]["Detalle"] == st.session_state.frase_guardada:
-                        st.session_state.historial.pop(0)
                         
-                    st.session_state.historial.insert(0, nuevo_registro)
-                    st.session_state.historial = st.session_state.historial[:90]
+                guardar_en_historial(cliente_real, hoja_registro, frase, estado, nota, proximo_contacto)
+                    
                 else:
                     st.error("❌ Error interno: no se pudo encontrar la fila del cliente seleccionado.")
 
