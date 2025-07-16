@@ -302,6 +302,9 @@ if st.session_state.get("autenticado"):
                         "Próximo contacto": st.session_state.proximo_contacto_guardado,
                         "Asesor": hoja_registro
                     }
+                    if st.session_state.historial and st.session_state.historial[0]["Cliente"] == seleccion and st.session_state.historial[0]["Detalle"] == st.session_state.frase_guardada:
+                        st.session_state.historial.pop(0)
+                        
                     st.session_state.historial.insert(0, nuevo_registro)
                     st.session_state.historial = st.session_state.historial[:90]
                 else:
