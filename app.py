@@ -281,6 +281,8 @@ if st.session_state.get("autenticado"):
                     hoja_registro = procesar_contacto(cliente_real, fila, frase, estado, proximo_contacto, nota)
                     st.session_state.hoja_registro_final = hoja_registro
 
+                    guardar_en_historial(cliente_real, hoja_registro, frase, estado, nota, proximo_contacto)
+
                     st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
 
                 else:
