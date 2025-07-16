@@ -248,8 +248,15 @@ if st.session_state.get("autenticado"):
                     fila, cliente_real = coincidencias[0]
                     hoja_registro = procesar_contacto(cliente_real, fila, frase, estado, proximo_contacto, nota)
                     st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
+
+                # ✅ Guardar también los datos relevantes para el historial
                     st.session_state.cliente_input = cliente_real 
+                    st.session_state.frase_guardada = frase
+                    st.session_state.estado_guardado = estado
+                    st.session_state.nota_guardada = nota
+                    st.session_state.proximo_contacto_guardado = proximo_contacto
                     st.session_state.hoja_registro_final = hoja_registro
+
                 else:
                     st.session_state.coincidencias = coincidencias
                     st.session_state.cliente_input = cliente_input
