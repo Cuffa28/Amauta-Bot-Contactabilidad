@@ -311,20 +311,6 @@ if st.session_state.get("autenticado"):
         if "historial" not in st.session_state:
             st.session_state.historial = []
 
-        if st.session_state.hoja_registro_final:
-            nuevo_registro = {
-                "Cliente": st.session_state.cliente_input,
-                "Detalle": st.session_state.frase_guardada,
-                "Fecha": datetime.datetime.now().strftime("%d/%m/%Y"),
-                "Estado": st.session_state.estado_guardado,
-                "Nota": st.session_state.nota_guardada,
-                "Próximo contacto": st.session_state.proximo_contacto_guardado,
-                "Asesor": st.session_state.hoja_registro_final
-            }
-            st.session_state.historial.insert(0, nuevo_registro)
-            st.session_state.historial = st.session_state.historial[:90]
-            st.session_state.hoja_registro_final = ""  # ✅ Evita duplicaciones en el rerun
-
         if st.session_state.historial:
             st.subheader("📂 Historial reciente de cargas")
             df_historial = pd.DataFrame.from_records(st.session_state.historial)
