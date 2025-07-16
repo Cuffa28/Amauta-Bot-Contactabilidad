@@ -301,8 +301,10 @@ if st.session_state.get("autenticado"):
             seleccion = st.selectbox("❗Se encontraron varios clientes, elegí el correcto:", opciones)
 
             if st.button("Confirmar cliente"):
-                coincidencias_validas = [fila for fila, nombre in st.session_state.coincidencias if nombre == seleccion]
-
+                coincidencias_validas = [
+                    fila for fila, nombre in st.session_state.coincidencias
+                    if normalizar(nombre) == normalizar(seleccion)
+                ]
                 if coincidencias_validas:
                     fila_cliente = coincidencias_validas[0]
                     hoja_registro = procesar_contacto(
