@@ -1,12 +1,6 @@
 import datetime
 import re
-import unicodedata
-from drive_utils import obtener_hoja_clientes
-
-def normalizar(texto):
-    texto = texto.upper().replace(".", "").replace(",", "").strip()
-    texto = unicodedata.normalize('NFD', texto).encode('ascii', 'ignore').decode('utf-8')
-    return texto
+from drive_utils import obtener_hoja_clientes, normalizar
 
 def detectar_tipo(frase):
     frase = frase.lower()
@@ -68,4 +62,3 @@ def buscar_clientes_similares_por_asesor(cliente_input, asesor_input):
     if coincidencia_exacta:
         return [coincidencia_exacta]
     return coincidencias
-
