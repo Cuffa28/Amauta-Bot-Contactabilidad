@@ -28,16 +28,22 @@ def detectar_tipo(frase):
 
 def extraer_datos(frase):
     frase_normalizada = normalizar(frase)
-    patron = (
-        r"(?:se hablo con|llame a|me comunique con|chatee con|le escribi a|"
-        r"me reuni con|visite a|estuve con|tuve un zoom con|tuve un meet con) "
-        r"([A-Z\s]+) EL (\d{1,2}/\d{1,2}/\d{4}) POR (.+)"
-    )
-    coincidencias = re.findall(patron, frase_normalizada, re.IGNORECASE)
-    if coincidencias:
-        cliente, fecha_str, motivo = coincidencias[0]
-        fecha_contacto = datetime.datetime.strptime(fecha_str.strip(), "%d/%m/%Y").strftime("%d/%m/%Y")
-        return normalizar(cliente), fecha_contacto, motivo.strip()
-    else:
-        raise ValueError("No se pudo interpretar la frase. Usá el formato sugerido.")
+
+    patrones = [
+        # patrón para frases tipo: Se contactó con CLIENTE el DD/MM/YYYY por MOTIVO
+        r"SE CONTACTO CON (.*?) EL (\d{1,2}/\d{1,2}/\d{4}) POR (.*)",
+
+        # patrón para frases tipo: Hablé con CLIENTE el DD/MM/YYYY por MOTIVO
+        r"(?:HABLE CON|LLAME A|ME COMUNIQUE CON|CHATEE CON|LE ESCRIBI A|ME REUNI CON|VISITE A|ESTUVE CON|TUVE UN ZOOM CON|TUVE UN MEET CON) (.*?) EL (\d{1,2}/\d{1,2}/\d{4}) POR (.*)",
+    ]
+
+    for patron in patrones:
+        coincidencias = re.findall(patron, frase_normalizada, re.IGNORECASE)
+        if coincidencias:
+            cliente, fecha_str, motivo = coincidencias[0]
+            fecha_contacto = datetime.datetime.strptime(fecha_str.strip(), "%d/%m/%Y").strftime("%d/%m/%Y")
+            return normalizar(cliente), fecha_contacto, motivo.strip()
+
+    raise ValueError("No se pudo interpretar la frase. Usá el formato sugerido.")
+
 
