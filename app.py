@@ -74,14 +74,13 @@ with tabs[0]:
         cliente_seleccionado = st.selectbox("👤 Seleccioná el cliente:", options=nombres_clientes)
 
         fecha_contacto = st.date_input("📅 Fecha del contacto:", format="YYYY/MM/DD")
-        tipo_contacto = st.selectbox("📞 Tipo de contacto:", ["LLAMADA", "MENSAJES", "REUNION", "OTRO"])
+        tipo_contacto = st.selectbox("📞 Tipo de contacto:", ["LLAMADA", "MENSAJES", "REUNION", "VISITA", "OTRO"])
         motivo_contacto = st.text_input("📝 Motivo del contacto:", placeholder="Ej: revisión de cartera")
 
         frase = f"Se contactó con {cliente_seleccionado} el {fecha_contacto.strftime('%d/%m/%Y')} por {motivo_contacto.lower()}"
     else:
         frase = st.text_input("📝 Escribí el contacto realizado:", placeholder="Ej: Hablé con Lavaque el 10/7/2025 por revisión de cartera")
 
-    # 👇 Resto del flujo (igual)
     try:
         cliente_preview, fecha_preview, motivo_preview = extraer_datos(frase)
         st.markdown(f"📌 Se detectó: **{cliente_preview}**, fecha: **{fecha_preview}**, motivo: _{motivo_preview}_")
@@ -122,6 +121,49 @@ with tabs[0]:
                 st.session_state.estado_guardado = estado
         except Exception as e:
             st.error(f"⚠️ Error procesando el contacto: {str(e)}")
+
+    # 📥 Carga múltiple
+    st.markdown("---")
+    st.subheader("📥 Carga múltiple de contactos")
+
+    texto_masivo = st.text_area(
+        "🧾 Pegá aquí varias frases de contacto (una por línea):",
+        placeholder="Ej:\nHablé con Juan el 10/7/2025 por revisión de bonos\nZoom con Lavalle el 11/7/2025 por presentación"
+    )
+
+    estado_masivo = st.selectbox("📌 Estado general para todos los contactos:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"])
+    nota_masiva = st.text_input("🗒️ Nota general para todos los contactos (opcional):")
+    agendar_masivo = st.radio("📅 ¿Querés agendar próximo contacto en todos?", ["No", "Sí"], key="agenda_masivo")
+    proximo_contacto_masivo = ""
+    if agendar_masivo == "Sí":
+        fecha_prox_masivo = st.date_input("🗓️ Próximo contacto para todos:", format="YYYY/MM/DD", key="proximo_contacto_masivo_fecha")
+        proximo_contacto_masivo = fecha_prox_masivo.strftime("%d/%m/%Y")
+
+    if st.button("📌 Cargar múltiples contactos"):
+        lineas = texto_masivo.strip().split("\n")
+        exitosos = 0
+        fallidos = []
+
+        for linea in lineas:
+            try:
+                cliente_input, _, _ = extraer_datos(linea)
+                coincidencias = buscar_clientes_similares(cliente_input)
+
+                if len(coincidencias) == 1:
+                    fila, cliente_real = coincidencias[0]
+                    hoja_registro = procesar_contacto(cliente_real, fila, linea, estado_masivo, proximo_contacto_masivo, nota_masiva, extraer_datos, detectar_tipo)
+                    guardar_en_historial(cliente_real, hoja_registro, linea, estado_masivo, nota_masiva, proximo_contacto_masivo)
+                    exitosos += 1
+                else:
+                    fallidos.append(linea)
+            except Exception:
+                fallidos.append(linea)
+
+        st.success(f"✅ {exitosos} contactos cargados correctamente.")
+        if fallidos:
+            st.warning("⚠️ No se pudieron interpretar las siguientes líneas:")
+            for f in fallidos:
+                st.text(f"- {f}")
 
     if st.session_state.coincidencias:
         opciones = [nombre for _, nombre in st.session_state.coincidencias]
