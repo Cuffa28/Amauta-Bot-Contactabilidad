@@ -74,7 +74,7 @@ with tabs[0]:
         cliente_seleccionado = st.selectbox("👤 Seleccioná el cliente:", options=nombres_clientes)
 
         fecha_contacto = st.date_input("📅 Fecha del contacto:", format="YYYY/MM/DD")
-        tipo_contacto = st.selectbox("📞 Tipo de contacto:", ["LLAMADA", "MENSAJES", "REUNION", "VISITA", "OTRO"])
+        tipo_contacto = st.selectbox("📞 Tipo de contacto:", ["LLAMADA", "MENSAJES", "REUNION", "OTRO"])
         motivo_contacto = st.text_input("📝 Motivo del contacto:", placeholder="Ej: revisión de cartera")
 
         frase = f"Se contactó con {cliente_seleccionado} el {fecha_contacto.strftime('%d/%m/%Y')} por {motivo_contacto.lower()}"
