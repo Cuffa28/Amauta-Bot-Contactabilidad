@@ -113,13 +113,14 @@ with tabs[0]:
         seleccion = st.selectbox("❗Se encontraron varios clientes, elegí el correcto:", opciones)
 
         if st.button("Confirmar cliente"):
-            st.write("DEBUG – seleccion:", repr(seleccion))
-            st.write("DEBUG – coincidencias:", st.session_state.coincidencias)
+
+            st.write("DEBUG: coincidencias:", st.session_state.coincidencias)
+            st.write("DEBUG: selección:", repr(seleccion))
 
             sele_norm = normalizar(seleccion)
             coincidencias_validas = [
                 fila for fila, nombre in st.session_state.coincidencias
-                if normalizar(nombre).find(sele_norm) != -1
+                if sele_norm in normalizar(nombre)
             ]
 
             if coincidencias_validas:
@@ -150,6 +151,7 @@ with tabs[0]:
                 )
             else:
                 st.error("❌ Error interno: no se pudo encontrar la fila del cliente seleccionado.")
+                st.write("DEBUG: coincidencias_validas =", coincidencias_validas)
 
 
     if "historial" not in st.session_state:
