@@ -74,61 +74,6 @@ def obtener_hoja_clientes():
     data = hoja_clientes.get_all_records()
     return pd.DataFrame(data)
 
-# Función para normalizar nombres (mayúsculas, tildes, etc.)
-def normalizar(texto):
-    texto = texto.upper().replace(".", "").replace(",", "").strip()
-    texto = unicodedata.normalize('NFD', texto).encode('ascii', 'ignore').decode('utf-8')
-    return texto
-
-# Detección automática de tipo de contacto
-def detectar_tipo(frase):
-    frase = frase.lower()
-    if any(p in frase for p in ["llamé a", "llame a", "me comuniqué con", "se llamó a", "hable con", "hable a", "se hablo con"]):
-        return "LLAMADA"
-    elif any(p in frase for p in ["le escribi a", "chatee con", "cheteé con", "envie un whatsapp a"]):
-        return "MENSAJES"
-    elif any(p in frase for p in ["me reuni con", "me junte con", "estuve con", "tuve un zoom con", "visite a", "tuve un meet con"]):
-        return "REUNION"
-    else:
-        return "CONTACTO"
-
-# Parsear la frase principal
-def extraer_datos(frase):
-    frase_normalizada = normalizar(frase)
-    patron = r"(?:se hablo con|llame a|me comunique con|chatee con|le escribi a|me reuni con|visite a|estuve con|tuve un zoom con|tuve un meet con) ([A-Z\s]+) EL (\d{1,2}/\d{1,2}/\d{4}) POR (.+)"
-    coincidencias = re.findall(patron, frase_normalizada, re.IGNORECASE)
-    if coincidencias:
-        cliente, fecha_str, motivo = coincidencias[0]
-        fecha_contacto = datetime.datetime.strptime(fecha_str.strip(), "%d/%m/%Y").strftime("%d/%m/%Y")
-        return normalizar(cliente), fecha_contacto, motivo.strip()
-    else:
-        raise ValueError("No se pudo interpretar la frase. Usá el formato sugerido.")
-
-# Buscar posibles coincidencias
-def buscar_clientes_similares(cliente_input):
-    df_clientes = obtener_hoja_clientes()
-    nombres = df_clientes["CLIENTE"].tolist()
-    cliente_input_normalizado = normalizar(cliente_input)
-    partes_input = cliente_input_normalizado.split()
-    coincidencias = []
-
-    for i, nombre in enumerate(nombres, start=1):
-        nombre_normalizado = normalizar(nombre)
-        partes_nombre = nombre_normalizado.split()
-
-        if len(partes_input) == 1:
-            # Input corto: aceptar si cualquier palabra coincide parcialmente
-            if any(p in parte for p in partes_input for parte in partes_nombre):
-                coincidencias.append((i, nombre))
-        else:
-            # Input más largo: coincidencia más estricta
-            match_parcial = all(p in partes_nombre for p in partes_input)
-            match_exacto = cliente_input_normalizado in nombre_normalizado
-            if match_parcial or match_exacto:
-                coincidencias.append((i, nombre))
-
-    return coincidencias
-
 # Procesar contacto
 def procesar_contacto(cliente_real, fila_cliente, frase, estado, proximo_contacto, nota):
     _, fecha_contacto, detalle = extraer_datos(frase)
@@ -217,30 +162,6 @@ def obtener_recordatorios_pendientes(mail_ingresado):
                     continue
 
     return pendientes
-    
-def guardar_en_historial(cliente_real, hoja_registro, frase, estado, nota, proximo_contacto):
-    try:
-        cliente_nombre, fecha_detalle, motivo = extraer_datos(frase)
-        detalle_actual = f"{motivo} ({fecha_detalle})"
-    except:
-        detalle_actual = frase  # fallback si falla el parseo
-
-    nuevo_registro = {
-        "Cliente": cliente_real,
-        "Detalle": detalle_actual,
-        "Fecha": datetime.datetime.now().strftime("%d/%m/%Y"),
-        "Estado": estado,
-        "Nota": nota,
-        "Próximo contacto": proximo_contacto,
-        "Asesor": hoja_registro
-    }
-
-    # Evitar duplicados exactos
-    if st.session_state.historial and st.session_state.historial[0]["Cliente"] == cliente_real and st.session_state.historial[0]["Detalle"] == detalle_actual:
-        st.session_state.historial.pop(0)
-
-    st.session_state.historial.insert(0, nuevo_registro)
-    st.session_state.historial = st.session_state.historial[:90]  # Limitar a 90 entradas
 
 # STREAMLIT – Crear pestañas organizadas
 if st.session_state.get("autenticado"):
