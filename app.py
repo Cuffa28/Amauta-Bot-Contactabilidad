@@ -64,19 +64,26 @@ tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 # -------- TAB 1: Cargar Contactos --------
 with tabs[0]:
     st.title("📋 Registro de Contactos Comerciales")
-    frase = st.text_input("📝 Escribí el contacto realizado:", placeholder="Ej: Se habló con Lavaque el 10/7/2025 por revisión de cartera")
 
-    try:
-        cliente_preview, fecha_preview, motivo_preview = extraer_datos(frase)
-        st.markdown(f"📌 Se detectó: **{cliente_preview}**, fecha: **{fecha_preview}**, motivo: _{motivo_preview}_")
-    except Exception as e:
-        st.error(f"⚠️ No se pudo interpretar correctamente: {e}")
+    # Datos de clientes
+    df_clientes = obtener_hoja_clientes()
+    nombres_clientes = sorted(df_clientes["CLIENTE"].unique())
+    cliente_seleccionado = st.selectbox("👤 Seleccioná el cliente:", options=nombres_clientes)
 
+    # Nueva carga asistida
+    fecha_contacto = st.date_input("📅 Fecha del contacto:", format="YYYY/MM/DD")
+    tipo_contacto = st.selectbox("📞 Tipo de contacto:", ["LLAMADA", "MENSAJES", "REUNION", "VISITA", "OTRO"])
+    motivo_contacto = st.text_input("📝 Motivo del contacto:", placeholder="Ej: revisión de cartera")
+
+    # Frase generada automáticamente
+    frase = f"Se contactó con {cliente_seleccionado} el {fecha_contacto.strftime('%d/%m/%Y')} por {motivo_contacto.lower()}"
+
+    # Otros campos igual que antes
     estado = st.selectbox("📌 Estado del contacto:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"])
     agendar = st.radio("📅 ¿Querés agendar un próximo contacto?", ["No", "Sí"])
     proximo_contacto = ""
     if agendar == "Sí":
-        fecha_proxima = st.date_input("🗓️ ¿Cuándo sería el próximo contacto?", format="YYYY/MM/DD")
+        fecha_proxima = st.date_input("🗓️ ¿Cuándo sería el próximo contacto?", format="YYYY/MM/DD", key="proximo_contacto_fecha")
         proximo_contacto = fecha_proxima.strftime("%d/%m/%Y")
 
     nota = st.text_input("🗒️ ¿Querés agregar una nota?", placeholder="Ej: seguimiento de bonos")
@@ -87,7 +94,7 @@ with tabs[0]:
 
     if st.button("Actualizar contacto"):
         try:
-            cliente_input, _, _ = extraer_datos(frase)
+            cliente_input = cliente_seleccionado
             coincidencias = buscar_clientes_similares(cliente_input)
 
             if len(coincidencias) == 0:
@@ -105,7 +112,7 @@ with tabs[0]:
                 st.session_state.nota_guardada = nota
                 st.session_state.estado_guardado = estado
         except Exception as e:
-            st.error(f"⚠️ Error procesando la frase: {str(e)}")
+            st.error(f"⚠️ Error procesando el contacto: {str(e)}")
 
     if st.session_state.coincidencias:
         opciones = [nombre for _, nombre in st.session_state.coincidencias]
