@@ -115,7 +115,7 @@ with tabs[0]:
         if st.button("Confirmar cliente"):
             coincidencias_validas = [
                 fila for fila, nombre in st.session_state.coincidencias
-                if seleccion.strip().lower() in nombre.strip().lower()
+                if normalizar(nombre) == normalizar(seleccion)
             ]
             if coincidencias_validas:
                 fila_cliente = coincidencias_validas[0]
@@ -126,7 +126,7 @@ with tabs[0]:
                     st.session_state.estado_guardado,
                     st.session_state.proximo_contacto_guardado,
                     st.session_state.nota_guardada,
-                    entraer_datos,
+                    extraer_datos,
                     detectar_tipo
                 )
 
@@ -135,9 +135,17 @@ with tabs[0]:
                 st.session_state.cliente_input = seleccion 
                 st.session_state.coincidencias = []
 
-                guardar_en_historial(seleccion, hoja_registro, st.session_state.frase_guardada, st.session_state.estado_guardado, st.session_state.nota_guardada, st.session_state.proximo_contacto_guardado)
+                guardar_en_historial(
+                    seleccion,
+                    hoja_registro,
+                    st.session_state.frase_guardada,
+                    st.session_state.estado_guardado,
+                    st.session_state.nota_guardada,
+                    st.session_state.proximo_contacto_guardado
+                )
             else:
                 st.error("❌ Error interno: no se pudo encontrar la fila del cliente seleccionado.")
+
 
     if "historial" not in st.session_state:
         st.session_state.historial = []
