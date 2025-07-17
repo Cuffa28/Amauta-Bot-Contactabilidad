@@ -113,10 +113,15 @@ with tabs[0]:
         seleccion = st.selectbox("❗Se encontraron varios clientes, elegí el correcto:", opciones)
 
         if st.button("Confirmar cliente"):
+            st.write("DEBUG – seleccion:", repr(seleccion))
+            st.write("DEBUG – coincidencias:", st.session_state.coincidencias)
+
+            sele_norm = normalizar(seleccion)
             coincidencias_validas = [
                 fila for fila, nombre in st.session_state.coincidencias
-                if normalizar(nombre) == normalizar(seleccion)
+                if normalizar(nombre).find(sele_norm) != -1
             ]
+
             if coincidencias_validas:
                 fila_cliente = coincidencias_validas[0]
                 hoja_registro = procesar_contacto(
