@@ -115,7 +115,7 @@ with tabs[0]:
         if st.button("Confirmar cliente"):
             coincidencias_validas = [
                 fila for fila, nombre in st.session_state.coincidencias
-                if normalizar(nombre) == normalizar(seleccion)
+                if seleccion.strip().lower() in nombre.strip().lower()
             ]
             if coincidencias_validas:
                 fila_cliente = coincidencias_validas[0]
