@@ -4,7 +4,12 @@ import datetime
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-from utils import normalizar
+
+def normalizar(texto):
+    import unicodedata
+    texto = texto.upper().replace(".", "").replace(",", "").strip()
+    texto = unicodedata.normalize('NFD', texto).encode('ascii', 'ignore').decode('utf-8')
+    return texto
 
 # --- Autenticación con Google ---
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
