@@ -6,13 +6,11 @@ from drive_utils import (
     procesar_contacto,
     marcar_contacto_como_hecho,
     obtener_recordatorios_pendientes,
-    buscar_clientes_similares_por_asesor,
     normalizar
 )
 from historial import guardar_en_historial, cargar_historial_completo
 from utils import extraer_datos, detectar_tipo
 
-# Autenticación por mail
 usuarios_autorizados = [
     "facundo@amautainversiones.com",
     "florencia@amautainversiones.com",
@@ -36,11 +34,8 @@ if not st.session_state.autenticado:
             st.error("❌ No estás autorizado para ingresar a esta aplicación.")
     st.stop()
 
-# ---------------------- APP ----------------------
-
 tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 
-# -------- TAB 1: Cargar Contactos --------
 with tabs[0]:
     st.title("📋 Registro de Contactos Comerciales")
 
@@ -80,7 +75,7 @@ with tabs[0]:
                 fecha_hoy = datetime.today().strftime("%d/%m/%Y")
                 frase_flash = f"Se contactó con {cliente_flash} el {fecha_hoy} por {motivo_flash}"
 
-                # ✔️ Solución: buscar asesor real con normalización
+                # Obtenemos cliente real y asesor exacto
                 coincidencias_global = [
                     (i + 2, row["CLIENTE"], row["ASESOR/A"])
                     for i, row in df_clientes.iterrows()
@@ -89,14 +84,10 @@ with tabs[0]:
 
                 if len(coincidencias_global) == 1:
                     fila_cliente, cliente_nombre_real, asesor = coincidencias_global[0]
-                    coincidencias = buscar_clientes_similares_por_asesor(cliente_nombre_real, asesor)
 
-                    if len(coincidencias) == 1:
-                        hoja = procesar_contacto(cliente_nombre_real, fila_cliente, frase_flash, "Hecho", "", nota_flash, extraer_datos, detectar_tipo)
-                        guardar_en_historial(cliente_nombre_real, hoja, frase_flash, "Hecho", nota_flash, "")
-                        st.success(f"✅ Contacto registrado con {cliente_nombre_real} en la hoja: **{hoja}**.")
-                    else:
-                        st.error("❌ No se encontró al cliente exacto para contacto rápido.")
+                    hoja = procesar_contacto(cliente_nombre_real, fila_cliente, frase_flash, "Hecho", "", nota_flash, extraer_datos, detectar_tipo)
+                    guardar_en_historial(cliente_nombre_real, hoja, frase_flash, "Hecho", nota_flash, "")
+                    st.success(f"✅ Contacto registrado con {cliente_nombre_real} en la hoja: **{hoja}**.")
                 else:
                     st.error("❌ No se pudo determinar el asesor del cliente.")
             except Exception as e:
@@ -117,25 +108,22 @@ with tabs[0]:
             proximo_contacto_masivo = fecha_prox.strftime("%d/%m/%Y")
 
         if st.button("📌 Cargar múltiples contactos"):
+            df_clientes = obtener_hoja_clientes()
             exitosos, fallidos = 0, []
             for i, linea in enumerate(texto_masivo.strip().split("\n"), start=1):
                 try:
                     cliente_in, _, _ = extraer_datos(linea)
                     coincidencias_global = [
-                        (i + 2, row["CLIENTE"], row["ASESOR/A"])
-                        for i, row in df_clientes.iterrows()
+                        (j + 2, row["CLIENTE"], row["ASESOR/A"])
+                        for j, row in df_clientes.iterrows()
                         if normalizar(row["CLIENTE"]) == normalizar(cliente_in)
                     ]
 
                     if len(coincidencias_global) == 1:
                         fila, cliente_nombre_real, asesor = coincidencias_global[0]
-                        coincidencias = buscar_clientes_similares_por_asesor(cliente_nombre_real, asesor)
-                        if len(coincidencias) == 1:
-                            hoja = procesar_contacto(cliente_nombre_real, fila, linea, estado_masivo, proximo_contacto_masivo, nota_masiva, extraer_datos, detectar_tipo)
-                            guardar_en_historial(cliente_nombre_real, hoja, linea, estado_masivo, nota_masiva, proximo_contacto_masivo)
-                            exitosos += 1
-                        else:
-                            fallidos.append(f"Línea {i}: cliente ambiguo")
+                        hoja = procesar_contacto(cliente_nombre_real, fila, linea, estado_masivo, proximo_contacto_masivo, nota_masiva, extraer_datos, detectar_tipo)
+                        guardar_en_historial(cliente_nombre_real, hoja, linea, estado_masivo, nota_masiva, proximo_contacto_masivo)
+                        exitosos += 1
                     else:
                         fallidos.append(f"Línea {i}: no se encontró asesor")
                 except Exception as e:
@@ -163,6 +151,7 @@ with tabs[0]:
     nota = st.text_input("🗒️ ¿Querés agregar una nota?", placeholder="Ej: seguimiento de bonos")
 
     if st.button("Actualizar contacto"):
+        df_clientes = obtener_hoja_clientes()
         try:
             cliente_input, _, _ = extraer_datos(frase)
             coincidencias_global = [
@@ -198,7 +187,6 @@ with tabs[0]:
         mime="text/csv"
     )
 
-# -------- TAB 2: Recordatorios Pendientes --------
 with tabs[1]:
     st.title("📅 Recordatorios Pendientes")
     recordatorios = obtener_recordatorios_pendientes(st.session_state.mail_ingresado)
@@ -222,4 +210,3 @@ with tabs[1]:
                             st.error(f"⚠️ Error al marcar como hecho: {e}")
     else:
         st.success("🎉 No hay contactos pendientes. ¡Buen trabajo!")
-
