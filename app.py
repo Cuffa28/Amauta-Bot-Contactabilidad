@@ -113,7 +113,7 @@ with tabs[0]:
                 try:
                     cliente_in, _, _ = extraer_datos(linea)
                     asesor = df_clientes[df_clientes["CLIENTE"] == cliente_input]["ASESOR/A"].values[0]
-                    coincidencias = buscar_clientes_similares_por_asesor(cliente_input, asesor)
+                    coincidencias = buscar_clientes_similares_por_asesor(cliente_in, asesor)
                     if len(coincidencias) == 1:
                         fila, nombre = coincidencias[0]
                         hoja = procesar_contacto(nombre, fila, linea, estado_masivo, proximo_contacto_masivo, nota_masiva, extraer_datos, detectar_tipo)
