@@ -38,26 +38,6 @@ if not st.session_state.autenticado:
 
 tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 
-def buscar_clientes_similares(cliente_input):
-    df_clientes = obtener_hoja_clientes()
-    nombres = df_clientes["CLIENTE"].tolist()
-    cliente_input_normalizado = normalizar(cliente_input)
-
-    coincidencias = []
-    coincidencia_exacta = None
-
-    for i, nombre in enumerate(nombres, start=2):  # asumimos encabezado en fila 1
-        nombre_normalizado = normalizar(nombre)
-        if cliente_input_normalizado == nombre_normalizado:
-            coincidencia_exacta = (i, nombre)
-            break
-        elif cliente_input_normalizado in nombre_normalizado or nombre_normalizado in cliente_input_normalizado:
-            coincidencias.append((i, nombre))
-
-    if coincidencia_exacta:
-        return [coincidencia_exacta]  # Exact match wins
-    return coincidencias  # Sino, devuelve coincidencias parciales
-
 # -------- TAB 1: Cargar Contactos --------
 with tabs[0]:
     st.title("📋 Registro de Contactos Comerciales")
