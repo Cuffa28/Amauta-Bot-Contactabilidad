@@ -7,7 +7,7 @@ from drive_utils import (
     marcar_contacto_como_hecho,
     obtener_recordatorios_pendientes
 )
-from historial import guardar_en_historial
+from historial import guardar_en_historial, cargar_historial_completo
 from utils import normalizar, extraer_datos, detectar_tipo
 
 # Autenticación por mail
@@ -35,6 +35,7 @@ if not st.session_state.autenticado:
     st.stop()
 
 # ---------------------- APP ----------------------
+
 tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 
 def buscar_clientes_similares(cliente_input):
@@ -81,11 +82,9 @@ with tabs[0]:
 
         frase = f"Se contactó con {cliente_seleccionado} el {fecha_contacto.strftime('%d/%m/%Y')} por {motivo_contacto.lower()}"
 
-    # --- Redacción libre ---
     elif modo_carga == "Redacción libre":
         frase = st.text_input("📝 Escribí el contacto realizado:", placeholder="Ej: Hablé con Lavaque el 10/7/2025 por revisión de cartera")
 
-    # --- Carga rápida ---
     elif modo_carga == "Carga rápida":
         st.markdown("---")
         st.subheader("⚡ Carga rápida de contacto hecho hoy")
@@ -118,15 +117,11 @@ with tabs[0]:
                 st.error(f"⚠️ Error en carga rápida: {e}")
         st.stop()
 
-    # --- Carga múltiple ---
     elif modo_carga == "Carga múltiple":
         st.markdown("---")
         st.subheader("📥 Carga múltiple de contactos")
 
-        texto_masivo = st.text_area(
-            "🧾 Pegá aquí varias frases (una por línea):",
-            placeholder="Ej:\nHablé con Juan el 10/7/2025 por bonos\nZoom con Lavalle el 11/7/2025 por demo"
-        )
+        texto_masivo = st.text_area("🧾 Pegá aquí varias frases (una por línea):")
         estado_masivo = st.selectbox("📌 Estado general:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"])
         nota_masiva = st.text_input("🗒️ Nota general (opcional):")
         agendar_masivo = st.radio("📅 ¿Agendar próximo contacto?", ["No", "Sí"], key="agenda_masivo")
@@ -157,7 +152,6 @@ with tabs[0]:
                     st.text(f"- {f}")
         st.stop()
 
-    # --- Flujo común para guiado o libre ---
     try:
         cliente_preview, fecha_preview, motivo_preview = extraer_datos(frase)
         st.markdown(f"📌 Se detectó: **{cliente_preview}**, fecha: **{fecha_preview}**, motivo: _{motivo_preview}_")
@@ -173,62 +167,36 @@ with tabs[0]:
 
     nota = st.text_input("🗒️ ¿Querés agregar una nota?", placeholder="Ej: seguimiento de bonos")
 
-    for key in ["coincidencias", "cliente_input", "frase_guardada", "proximo_contacto_guardado", "nota_guardada", "estado_guardado", "hoja_registro_final"]:
-        if key not in st.session_state:
-            st.session_state[key] = [] if key == "coincidencias" else ""
-
     if st.button("Actualizar contacto"):
         try:
             cliente_input, _, _ = extraer_datos(frase)
             coincidencias = buscar_clientes_similares(cliente_input)
-            if len(coincidencias) == 0:
-                st.error(f"⚠️ No se encontró ningún cliente similar a '{cliente_input}'.")
-            elif len(coincidencias) == 1:
+            if len(coincidencias) == 1:
                 fila, cliente_real = coincidencias[0]
                 hoja = procesar_contacto(cliente_real, fila, frase, estado, proximo_contacto, nota, extraer_datos, detectar_tipo)
                 guardar_en_historial(cliente_real, hoja, frase, estado, nota, proximo_contacto)
-                st.success(f"✅ Contacto registrado correctamente.")
+                st.success("✅ Contacto registrado correctamente.")
             else:
-                st.session_state.coincidencias = coincidencias
-                st.session_state.frase_guardada = frase
-                st.session_state.proximo_contacto_guardado = proximo_contacto
-                st.session_state.nota_guardada = nota
-                st.session_state.estado_guardado = estado
+                st.error("❌ Cliente no encontrado o hay varias coincidencias.")
         except Exception as e:
             st.error(f"⚠️ Error procesando el contacto: {e}")
 
-    # Manejo de coincidencias (como ya tenías)
-    if st.session_state.coincidencias:
-        opciones = [nombre for _, nombre in st.session_state.coincidencias]
-        seleccion = st.selectbox("❗Seleccioná el cliente correcto:", opciones, key="cliente_input_seleccionado")
-        if st.button("Confirmar cliente"):
-            fila_cliente = next((f for f, n in st.session_state.coincidencias if normalizar(n) == normalizar(seleccion)), None)
-            if fila_cliente:
-                hoja = procesar_contacto(seleccion, fila_cliente, st.session_state.frase_guardada, st.session_state.estado_guardado, st.session_state.proximo_contacto_guardado, st.session_state.nota_guardada, extraer_datos, detectar_tipo)
-                guardar_en_historial(seleccion, hoja, st.session_state.frase_guardada, st.session_state.estado_guardado, st.session_state.nota_guardada, st.session_state.proximo_contacto_guardado)
-                st.success("✅ Contacto actualizado correctamente.")
-                st.session_state.coincidencias = []
-            else:
-                st.error("❌ No se encontró la fila del cliente seleccionado.")
-
-    # Historial
+    st.subheader("📂 Historial reciente de cargas")
     if "historial" not in st.session_state:
         st.session_state.historial = []
 
     if st.session_state.historial:
-        st.subheader("📂 Historial reciente de cargas")
         df_historial = pd.DataFrame.from_records(st.session_state.historial)
         st.dataframe(df_historial, use_container_width=True)
 
-        st.subheader("🔍 Filtros sobre el historial")
-        clientes_disp = sorted({h["Cliente"] for h in st.session_state.historial})
-        filtro = st.selectbox("Filtrar historial por cliente", ["Todos"] + clientes_disp)
-        df_fil = df_historial if filtro == "Todos" else df_historial[df_historial["Cliente"] == filtro]
-        st.dataframe(df_fil, use_container_width=True)
-
-        if st.checkbox("📖 Ver historial completo"):
-            st.markdown("⚠️ Esto puede tardar si hay muchas entradas.")
-            st.dataframe(df_historial, use_container_width=True)
+    st.subheader("📥 Descargar historial completo")
+    df_completo = cargar_historial_completo()
+    st.download_button(
+        label="⬇️ Descargar historial",
+        data=df_completo.to_csv(index=False).encode("utf-8"),
+        file_name="historial_contactos.csv",
+        mime="text/csv"
+    )
 
 # -------- TAB 2: Recordatorios Pendientes --------
 with tabs[1]:
