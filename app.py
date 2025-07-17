@@ -72,7 +72,7 @@ with tabs[0]:
 
     # Nueva carga asistida
     fecha_contacto = st.date_input("📅 Fecha del contacto:", format="YYYY/MM/DD")
-    tipo_contacto = st.selectbox("📞 Tipo de contacto:", ["LLAMADA", "MENSAJES", "REUNION", "VISITA", "OTRO"])
+    tipo_contacto = st.selectbox("📞 Tipo de contacto:", ["LLAMADA", "MENSAJES", "REUNION", "OTRO"])
     motivo_contacto = st.text_input("📝 Motivo del contacto:", placeholder="Ej: revisión de cartera")
 
     # Frase generada automáticamente
