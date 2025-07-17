@@ -108,14 +108,18 @@ with tabs[0]:
         except Exception as e:
             st.error(f"⚠️ Error procesando la frase: {str(e)}")
 
-    if st.session_state.coincidencias:
-        opciones = [nombre for _, nombre in st.session_state.coincidencias]
-        seleccion = st.selectbox("❗Se encontraron varios clientes, elegí el correcto:", opciones)
+  if st.session_state.coincidencias:
+    opciones = [nombre for _, nombre in st.session_state.coincidencias]
+    st.selectbox(
+        "❗Se encontraron varios clientes, elegí el correcto:",
+        opciones,
+        key="cliente_input_seleccionado"
+    )
 
 if st.button("Confirmar cliente"):
-    seleccion = st.session_state.cliente_input_seleccionado if "cliente_input_seleccionado" in st.session_state else ""
-
+    seleccion = st.session_state.get("cliente_input_seleccionado", "")
     fila_cliente = None
+
     for fila, nombre in st.session_state.coincidencias:
         if normalizar(nombre) == normalizar(seleccion):
             fila_cliente = fila
