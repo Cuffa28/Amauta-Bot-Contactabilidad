@@ -66,20 +66,111 @@ with tabs[0]:
     st.title("📋 Registro de Contactos Comerciales")
 
     # ✅ Elección de modo
-    modo_carga = st.radio("🔀 ¿Cómo querés cargar el contacto?", ["Carga guiada", "Redacción libre"])
+    modo_carga = st.radio(
+        "🔀 ¿Cómo querés cargar el contacto?",
+        ["Carga guiada", "Redacción libre", "Carga rápida", "Carga múltiple"],
+        horizontal=True
+    )
 
-    if modo_carga == "Carga guiada":
-        df_clientes = obtener_hoja_clientes()
-        nombres_clientes = sorted(df_clientes["CLIENTE"].unique())
-        cliente_seleccionado = st.selectbox("👤 Seleccioná el cliente:", options=nombres_clientes)
+if modo_carga == "Carga guiada":
+    df_clientes = obtener_hoja_clientes()
+    nombres_clientes = sorted(df_clientes["CLIENTE"].unique())
+    cliente_seleccionado = st.selectbox("👤 Seleccioná el cliente:", options=nombres_clientes)
 
-        fecha_contacto = st.date_input("📅 Fecha del contacto:", format="YYYY/MM/DD")
-        tipo_contacto = st.selectbox("📞 Tipo de contacto:", ["LLAMADA", "MENSAJES", "REUNION", "VISITA", "OTRO"])
-        motivo_contacto = st.text_input("📝 Motivo del contacto:", placeholder="Ej: revisión de cartera")
+    fecha_contacto = st.date_input("📅 Fecha del contacto:", format="YYYY/MM/DD")
+    tipo_contacto = st.selectbox("📞 Tipo de contacto:", ["LLAMADA", "MENSAJES", "REUNION", "VISITA", "OTRO"])
+    motivo_contacto = st.text_input("📝 Motivo del contacto:", placeholder="Ej: revisión de cartera")
 
-        frase = f"Se contactó con {cliente_seleccionado} el {fecha_contacto.strftime('%d/%m/%Y')} por {motivo_contacto.lower()}"
-    else:
-        frase = st.text_input("📝 Escribí el contacto realizado:", placeholder="Ej: Hablé con Lavaque el 10/7/2025 por revisión de cartera")
+    frase = f"Se contactó con {cliente_seleccionado} el {fecha_contacto.strftime('%d/%m/%Y')} por {motivo_contacto.lower()}"
+
+elif modo_carga == "Redacción libre":
+    frase = st.text_input("📝 Escribí el contacto realizado:", placeholder="Ej: Hablé con Lavaque el 10/7/2025 por revisión de cartera")
+
+elif modo_carga == "Carga rápida":
+    st.markdown("---")
+    st.subheader("⚡ Carga rápida de contacto hecho hoy")
+
+    df_clientes = obtener_hoja_clientes()
+    lista_clientes = sorted(df_clientes["CLIENTE"].unique())
+    cliente_flash = st.selectbox("👤 Cliente:", lista_clientes, key="cliente_flash")
+
+    motivo_flash = st.text_input("📝 Motivo (opcional)", value="seguimiento general", key="motivo_flash")
+    nota_flash = st.text_input("🗒️ Nota (opcional)", key="nota_flash")
+
+    if st.button(f"✔️ Contacto hecho hoy con {cliente_flash}"):
+        try:
+            fecha_hoy = datetime.today().strftime("%d/%m/%Y")
+            frase_flash = f"Se contactó con {cliente_flash} el {fecha_hoy} por {motivo_flash}"
+            fila_cliente = None
+            coincidencias = buscar_clientes_similares(cliente_flash)
+
+            if len(coincidencias) == 1:
+                fila_cliente = coincidencias[0][0]
+
+            if fila_cliente:
+                hoja_registro = procesar_contacto(
+                    cliente_flash,
+                    fila_cliente,
+                    frase_flash,
+                    "Hecho",
+                    "",  # no agendar próximo
+                    nota_flash,
+                    extraer_datos,
+                    detectar_tipo
+                )
+
+                guardar_en_historial(cliente_flash, hoja_registro, frase_flash, "Hecho", nota_flash, "")
+                st.success(f"✅ Contacto registrado con {cliente_flash} en la hoja: **{hoja_registro}**.")
+            else:
+                st.error("❌ No se encontró al cliente exacto para contacto rápido.")
+        except Exception as e:
+            st.error(f"⚠️ Error en la carga rápida: {e}")
+    st.stop()
+
+    elif modo_carga == "Carga múltiple":
+        st.markdown("---")
+        st.subheader("📥 Carga múltiple de contactos")
+
+        texto_masivo = st.text_area(
+            "🧾 Pegá aquí varias frases de contacto (una por línea):",
+            placeholder="Ej:\nHablé con Juan el 10/7/2025 por revisión de bonos\nZoom con Lavalle el 11/7/2025 por presentación"
+        )
+
+        estado_masivo = st.selectbox("📌 Estado general para todos los contactos:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"])
+        nota_masiva = st.text_input("🗒️ Nota general para todos los contactos (opcional):")
+        agendar_masivo = st.radio("📅 ¿Querés agendar próximo contacto en todos?", ["No", "Sí"], key="agenda_masivo")
+        proximo_contacto_masivo = ""
+        if agendar_masivo == "Sí":
+            fecha_prox_masivo = st.date_input("🗓️ Próximo contacto para todos:", format="YYYY/MM/DD", key="proximo_contacto_masivo_fecha")
+            proximo_contacto_masivo = fecha_prox_masivo.strftime("%d/%m/%Y")
+
+    if st.button("📌 Cargar múltiples contactos"):
+        lineas = texto_masivo.strip().split("\n")
+        exitosos = 0
+        fallidos = []
+
+        for linea in lineas:
+            try:
+                cliente_input, _, _ = extraer_datos(linea)
+                coincidencias = buscar_clientes_similares(cliente_input)
+
+                if len(coincidencias) == 1:
+                    fila, cliente_real = coincidencias[0]
+                    hoja_registro = procesar_contacto(cliente_real, fila, linea, estado_masivo, proximo_contacto_masivo, nota_masiva, extraer_datos, detectar_tipo)
+                    guardar_en_historial(cliente_real, hoja_registro, linea, estado_masivo, nota_masiva, proximo_contacto_masivo)
+                    exitosos += 1
+                else:
+                    fallidos.append(linea)
+            except Exception:
+                fallidos.append(linea)
+
+        st.success(f"✅ {exitosos} contactos cargados correctamente.")
+        if fallidos:
+            st.warning("⚠️ No se pudieron interpretar las siguientes líneas:")
+            for f in fallidos:
+                st.text(f"- {f}")
+
+    st.stop()
 
     try:
         cliente_preview, fecha_preview, motivo_preview = extraer_datos(frase)
