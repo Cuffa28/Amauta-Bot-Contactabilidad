@@ -104,55 +104,55 @@ with tabs[0]:
                 st.session_state.proximo_contacto_guardado = proximo_contacto
                 st.session_state.nota_guardada = nota
                 st.session_state.estado_guardado = estado
-
         except Exception as e:
             st.error(f"⚠️ Error procesando la frase: {str(e)}")
 
-  if st.session_state.coincidencias:
-    opciones = [nombre for _, nombre in st.session_state.coincidencias]
-    seleccion = st.selectbox(
-        "❗Se encontraron varios clientes, elegí el correcto:",
-        opciones,
-        key="cliente_input_seleccionado"
-    )
+    if st.session_state.coincidencias:
+        opciones = [nombre for _, nombre in st.session_state.coincidencias]
+        seleccion = st.selectbox(
+            "❗Se encontraron varios clientes, elegí el correcto:",
+            opciones,
+            key="cliente_input_seleccionado"
+        )
 
-    if st.button("Confirmar cliente"):
-        seleccion = st.session_state.cliente_input_seleccionado  # <- correcto!
-        fila_cliente = None
+        if st.button("Confirmar cliente"):
+            seleccion = st.session_state.get("cliente_input_seleccionado", None)
+            if not seleccion:
+                st.error("⚠️ No se pudo recuperar la selección del cliente.")
+            else:
+                fila_cliente = None
+                for fila, nombre in st.session_state.coincidencias:
+                    if normalizar(nombre) == normalizar(seleccion):
+                        fila_cliente = fila
+                        break
 
-        for fila, nombre in st.session_state.coincidencias:
-            if normalizar(nombre) == normalizar(seleccion):
-                fila_cliente = fila
-                break
+                if fila_cliente:
+                    hoja_registro = procesar_contacto(
+                        seleccion,
+                        fila_cliente,
+                        st.session_state.frase_guardada,
+                        st.session_state.estado_guardado,
+                        st.session_state.proximo_contacto_guardado,
+                        st.session_state.nota_guardada,
+                        extraer_datos,
+                        detectar_tipo
+                    )
 
-        if fila_cliente:
-            hoja_registro = procesar_contacto(
-                seleccion,
-                fila_cliente,
-                st.session_state.frase_guardada,
-                st.session_state.estado_guardado,
-                st.session_state.proximo_contacto_guardado,
-                st.session_state.nota_guardada,
-                extraer_datos,
-                detectar_tipo
-            )
+                    st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
+                    st.session_state.hoja_registro_final = hoja_registro
+                    st.session_state.cliente_input = seleccion
+                    st.session_state.coincidencias = []
 
-            st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
-            st.session_state.hoja_registro_final = hoja_registro
-            st.session_state.cliente_input = seleccion
-            st.session_state.coincidencias = []
-
-            guardar_en_historial(
-                seleccion,
-                hoja_registro,
-                st.session_state.frase_guardada,
-                st.session_state.estado_guardado,
-                st.session_state.nota_guardada,
-                st.session_state.proximo_contacto_guardado
-            )
-        else:
-            st.error("❌ Error interno: no se pudo encontrar la fila del cliente seleccionado.")
-
+                    guardar_en_historial(
+                        seleccion,
+                        hoja_registro,
+                        st.session_state.frase_guardada,
+                        st.session_state.estado_guardado,
+                        st.session_state.nota_guardada,
+                        st.session_state.proximo_contacto_guardado
+                    )
+                else:
+                    st.error("❌ Error interno: no se pudo encontrar la fila del cliente seleccionado.")
 
     if "historial" not in st.session_state:
         st.session_state.historial = []
