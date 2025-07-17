@@ -26,7 +26,6 @@ def guardar_en_historial(cliente_real, hoja_registro, frase, estado, nota, proxi
     if "historial" not in st.session_state:
         st.session_state.historial = []
 
-    # En memoria: evitar duplicados y mantener top 90
     if (
         st.session_state.historial and
         st.session_state.historial[0]["Cliente"] == cliente_real and
@@ -37,7 +36,6 @@ def guardar_en_historial(cliente_real, hoja_registro, frase, estado, nota, proxi
     st.session_state.historial.insert(0, nuevo_registro)
     st.session_state.historial = st.session_state.historial[:90]
 
-    # Guardar en historial persistente
     df_historial = pd.DataFrame([nuevo_registro])
     if os.path.exists(ARCHIVO_HISTORIAL):
         df_historial.to_csv(ARCHIVO_HISTORIAL, mode='a', header=False, index=False)
