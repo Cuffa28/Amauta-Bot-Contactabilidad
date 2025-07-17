@@ -125,7 +125,9 @@ with tabs[0]:
                     st.session_state.frase_guardada,
                     st.session_state.estado_guardado,
                     st.session_state.proximo_contacto_guardado,
-                    st.session_state.nota_guardada
+                    st.session_state.nota_guardada,
+                    entraer_datos,
+                    detectar_tipo
                 )
 
                 st.success(f"✅ Contacto registrado correctamente en la hoja: **{hoja_registro}**.")
