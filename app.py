@@ -157,7 +157,8 @@ with tabs[0]:
                 for i, row in df_clientes.iterrows()
                 if normalizar(row["CLIENTE"]) == normalizar(cliente_input)
             ]
-                        if len(coincidencias) == 1:
+
+            if len(coincidencias) == 1:
                 fila, cliente_real, asesor = coincidencias[0]
                 hoja = procesar_contacto(cliente_real, fila, frase, estado, proximo_contacto, nota, extraer_datos, detectar_tipo)
                 guardar_en_historial(cliente_real, hoja, frase, estado, nota, proximo_contacto)
@@ -207,3 +208,4 @@ with tabs[1]:
                             st.error(f"⚠️ Error al marcar como hecho: {e}")
     else:
         st.success("🎉 No hay contactos pendientes. ¡Buen trabajo!")
+
