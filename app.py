@@ -65,20 +65,29 @@ tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 with tabs[0]:
     st.title("📋 Registro de Contactos Comerciales")
 
-    # Datos de clientes
-    df_clientes = obtener_hoja_clientes()
-    nombres_clientes = sorted(df_clientes["CLIENTE"].unique())
-    cliente_seleccionado = st.selectbox("👤 Seleccioná el cliente:", options=nombres_clientes)
+    # ✅ Elección de modo
+    modo_carga = st.radio("🔀 ¿Cómo querés cargar el contacto?", ["Carga guiada", "Redacción libre"])
 
-    # Nueva carga asistida
-    fecha_contacto = st.date_input("📅 Fecha del contacto:", format="YYYY/MM/DD")
-    tipo_contacto = st.selectbox("📞 Tipo de contacto:", ["LLAMADA", "MENSAJES", "REUNION", "OTRO"])
-    motivo_contacto = st.text_input("📝 Motivo del contacto:", placeholder="Ej: revisión de cartera")
+    if modo_carga == "Carga guiada":
+        df_clientes = obtener_hoja_clientes()
+        nombres_clientes = sorted(df_clientes["CLIENTE"].unique())
+        cliente_seleccionado = st.selectbox("👤 Seleccioná el cliente:", options=nombres_clientes)
 
-    # Frase generada automáticamente
-    frase = f"Se contactó con {cliente_seleccionado} el {fecha_contacto.strftime('%d/%m/%Y')} por {motivo_contacto.lower()}"
+        fecha_contacto = st.date_input("📅 Fecha del contacto:", format="YYYY/MM/DD")
+        tipo_contacto = st.selectbox("📞 Tipo de contacto:", ["LLAMADA", "MENSAJES", "REUNION", "VISITA", "OTRO"])
+        motivo_contacto = st.text_input("📝 Motivo del contacto:", placeholder="Ej: revisión de cartera")
 
-    # Otros campos igual que antes
+        frase = f"Se contactó con {cliente_seleccionado} el {fecha_contacto.strftime('%d/%m/%Y')} por {motivo_contacto.lower()}"
+    else:
+        frase = st.text_input("📝 Escribí el contacto realizado:", placeholder="Ej: Hablé con Lavaque el 10/7/2025 por revisión de cartera")
+
+    # 👇 Resto del flujo (igual)
+    try:
+        cliente_preview, fecha_preview, motivo_preview = extraer_datos(frase)
+        st.markdown(f"📌 Se detectó: **{cliente_preview}**, fecha: **{fecha_preview}**, motivo: _{motivo_preview}_")
+    except Exception as e:
+        st.error(f"⚠️ No se pudo interpretar correctamente: {e}")
+
     estado = st.selectbox("📌 Estado del contacto:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"])
     agendar = st.radio("📅 ¿Querés agendar un próximo contacto?", ["No", "Sí"])
     proximo_contacto = ""
@@ -94,7 +103,7 @@ with tabs[0]:
 
     if st.button("Actualizar contacto"):
         try:
-            cliente_input = cliente_seleccionado
+            cliente_input, _, _ = extraer_datos(frase)
             coincidencias = buscar_clientes_similares(cliente_input)
 
             if len(coincidencias) == 0:
