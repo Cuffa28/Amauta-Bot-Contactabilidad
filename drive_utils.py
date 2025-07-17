@@ -73,4 +73,29 @@ def marcar_contacto_como_hecho(cliente, asesor):
             return
 
 def obtener_recordatorios_pendientes(mail_usuario):
-    codigo = mail_usuario.split("@")[
+    codigo = mail_usuario.split("@")[0][:2].upper()
+    hoja_nombre = mapa_asesores.get(codigo)
+    if not hoja_nombre:
+        return []
+
+    hoja = spreadsheet.worksheet(hoja_nombre)
+    df = pd.DataFrame(hoja.get_all_records())
+
+    pendientes = []
+    hoy = datetime.datetime.now().date()
+
+    for i, row in df.iterrows():
+        cliente = row["CLIENTE"]
+        fecha_str = row.get("PRÓXIMO CONTACTO", "")
+        detalle = row.get("NOTA", "")
+        estado = row.get("ESTADO", "")
+
+        if fecha_str:
+            try:
+                fecha = datetime.datetime.strptime(fecha_str, "%d/%m/%Y").date()
+                tipo = "vencido" if fecha < hoy and estado != "Hecho" else "pendiente"
+                if tipo == "vencido" or fecha == hoy:
+                    pendientes.append((cliente, codigo, fecha.strftime("%d/%m/%Y"), detalle, tipo))
+            except ValueError:
+                continue
+    return pendientes
