@@ -5,7 +5,8 @@ from drive_utils import (
     obtener_hoja_clientes,
     procesar_contacto,
     marcar_contacto_como_hecho,
-    obtener_recordatorios_pendientes
+    obtener_recordatorios_pendientes,
+    buscar_clientes_similares_por_asesor
 )
 from historial import guardar_en_historial, cargar_historial_completo
 from utils import normalizar, extraer_datos, detectar_tipo
@@ -79,7 +80,8 @@ with tabs[0]:
                 fecha_hoy = datetime.today().strftime("%d/%m/%Y")
                 frase_flash = f"Se contactó con {cliente_flash} el {fecha_hoy} por {motivo_flash}"
 
-                coincidencias = buscar_clientes_similares(cliente_flash)
+                asesor = df_clientes[df_clientes["CLIENTE"] == cliente_flash]["ASESOR/A"].values[0]
+                coincidencias = buscar_clientes_similares_por_asesor(cliente_flash, asesor)
                 fila_cliente = coincidencias[0][0] if len(coincidencias) == 1 else None
 
                 if fila_cliente is not None:
