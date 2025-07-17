@@ -1,4 +1,3 @@
-
 import os
 import json
 import datetime
@@ -125,3 +124,26 @@ def obtener_recordatorios_pendientes(mail):
                     continue
 
     return pendientes
+
+# 🔍 Nueva función: búsqueda por cliente y su asesor real
+def buscar_clientes_similares_por_asesor(cliente_input, asesor_codigo):
+    df_clientes = obtener_hoja_clientes()
+    df_asesor = df_clientes[df_clientes["ASESOR/A"] == asesor_codigo]
+
+    nombres = df_asesor["CLIENTE"].tolist()
+    cliente_input_normalizado = normalizar(cliente_input)
+
+    coincidencias = []
+    coincidencia_exacta = None
+
+    for i, nombre in enumerate(nombres, start=2):  # asumimos encabezado en fila 1
+        nombre_normalizado = normalizar(nombre)
+        if cliente_input_normalizado == nombre_normalizado:
+            coincidencia_exacta = (i, nombre)
+            break
+        elif cliente_input_normalizado in nombre_normalizado or nombre_normalizado in cliente_input_normalizado:
+            coincidencias.append((i, nombre))
+
+    if coincidencia_exacta:
+        return [coincidencia_exacta]
+    return coincidencias
