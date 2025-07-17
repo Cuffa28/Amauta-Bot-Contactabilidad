@@ -101,15 +101,19 @@ with tabs[0]:
             try:
                 fecha_hoy = datetime.today().strftime("%d/%m/%Y")
                 frase_flash = f"Se contactó con {cliente_flash} el {fecha_hoy} por {motivo_flash}"
-                coincidencias = buscar_clientes_similares(cliente_flash)
-                fila_cliente = coincidencias[0][0] if len(coincidencias) == 1 else None
 
-                if fila_cliente:
+                coincidencias = buscar_clientes_similares(cliente_flash)
+                fila_cliente = None
+
+                if len(coincidencias) == 1:
+                    fila_cliente = coincidencias[0][0]
+
+                if fila_cliente is not None:
                     hoja = procesar_contacto(cliente_flash, fila_cliente, frase_flash, "Hecho", "", nota_flash, extraer_datos, detectar_tipo)
                     guardar_en_historial(cliente_flash, hoja, frase_flash, "Hecho", nota_flash, "")
-                    st.success(f"✅ Contacto registrado con {cliente_flash}.")
+                    st.success(f"✅ Contacto registrado con {cliente_flash} en la hoja: **{hoja}**.")
                 else:
-                    st.error("❌ No se encontró al cliente para carga rápida.")
+                    st.error("❌ No se encontró al cliente exacto para contacto rápido.")
             except Exception as e:
                 st.error(f"⚠️ Error en carga rápida: {e}")
         st.stop()
