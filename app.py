@@ -112,7 +112,8 @@ with tabs[0]:
             for i, linea in enumerate(texto_masivo.strip().split("\n"), start=1):
                 try:
                     cliente_in, _, _ = extraer_datos(linea)
-                    coincidencias = buscar_clientes_similares(cliente_in)
+                    asesor = df_clientes[df_clientes["CLIENTE"] == cliente_input]["ASESOR/A"].values[0]
+                    coincidencias = buscar_clientes_similares_por_asesor(cliente_input, asesor)
                     if len(coincidencias) == 1:
                         fila, nombre = coincidencias[0]
                         hoja = procesar_contacto(nombre, fila, linea, estado_masivo, proximo_contacto_masivo, nota_masiva, extraer_datos, detectar_tipo)
@@ -147,7 +148,8 @@ with tabs[0]:
     if st.button("Actualizar contacto"):
         try:
             cliente_input, _, _ = extraer_datos(frase)
-            coincidencias = buscar_clientes_similares(cliente_input)
+            asesor = df_clientes[df_clientes["CLIENTE"] == cliente_input]["ASESOR/A"].values[0]
+            coincidencias = buscar_clientes_similares_por_asesor(cliente_input, asesor)
             if len(coincidencias) == 1:
                 fila, cliente_real = coincidencias[0]
                 hoja = procesar_contacto(cliente_real, fila, frase, estado, proximo_contacto, nota, extraer_datos, detectar_tipo)
