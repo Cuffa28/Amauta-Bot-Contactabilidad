@@ -37,6 +37,28 @@ if not st.session_state.autenticado:
 # ---------------------- APP ----------------------
 tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 
+def buscar_clientes_similares(cliente_input):
+    df_clientes = obtener_hoja_clientes()
+    nombres = df_clientes["CLIENTE"].tolist()
+    cliente_input_normalizado = normalizar(cliente_input)
+    partes_input = cliente_input_normalizado.split()
+    coincidencias = []
+
+    for i, nombre in enumerate(nombres, start=1):
+        nombre_normalizado = normalizar(nombre)
+        partes_nombre = nombre_normalizado.split()
+
+        if len(partes_input) == 1:
+            if any(p in parte for p in partes_input for parte in partes_nombre):
+                coincidencias.append((i, nombre))
+        else:
+            match_parcial = all(p in partes_nombre for p in partes_input)
+            match_exacto = cliente_input_normalizado in nombre_normalizado
+            if match_parcial or match_exacto:
+                coincidencias.append((i, nombre))
+
+    return coincidencias
+
 # -------- TAB 1: Cargar Contactos --------
 with tabs[0]:
     st.title("📋 Registro de Contactos Comerciales")
