@@ -45,5 +45,3 @@ def extraer_datos(frase):
             return normalizar(cliente), fecha_contacto, motivo.strip()
 
     raise ValueError("No se pudo interpretar la frase. Usá el formato sugerido.")
-
-
