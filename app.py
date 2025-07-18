@@ -36,19 +36,6 @@ if not st.session_state.autenticado:
             st.error("❌ No estás autorizado.")
     st.stop()
 
-tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
-
-with tabs[0]:
-    st.title("📋 Registro de Contactos Comerciales")
-
-    modo_carga = st.radio(
-        "🔀 ¿Cómo querés cargar el contacto?",
-        ["Carga guiada", "Redacción libre", "Carga rápida", "Carga múltiple"],
-        horizontal=True
-    )
-
-    df_clientes = obtener_hoja_clientes()
-
  # 🧨 POP-UP EMERGENTE DE VENCIMIENTOS HOY (ESQUINA SUPERIOR IZQUIERDA)
     if "popup_oculto" not in st.session_state:
         st.session_state.popup_oculto = False
@@ -87,6 +74,19 @@ with tabs[0]:
         </div>
         """
         html(contenido_popup, height=300)
+
+tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
+
+with tabs[0]:
+    st.title("📋 Registro de Contactos Comerciales")
+
+    modo_carga = st.radio(
+        "🔀 ¿Cómo querés cargar el contacto?",
+        ["Carga guiada", "Redacción libre", "Carga rápida", "Carga múltiple"],
+        horizontal=True
+    )
+
+    df_clientes = obtener_hoja_clientes()
 
     def buscar_coincidencia(cliente_input):
         normal_input = normalizar(cliente_input)
