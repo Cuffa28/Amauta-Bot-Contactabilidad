@@ -51,7 +51,7 @@ if vencen_hoy and not st.session_state.popup_oculto:
     contenido_popup = f"""
     <div id=\"popup-alerta\" style=\"
         position: fixed;
-        top: 30px;
+        top: 20px;
         left: 20px;
         background-color: #fff3cd;
         color: #856404;
