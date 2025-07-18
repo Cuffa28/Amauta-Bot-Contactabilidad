@@ -38,24 +38,33 @@ def obtener_hoja_nombre(codigo_asesor):
     return mapa_asesores.get(codigo_asesor, "DESCONOCIDO")
 
 def procesar_contacto(cliente_real, fila_dummy, frase, estado, proximo_contacto, nota, extraer_datos_fn, detectar_tipo_fn):
-    hoja_nombre = mapa_asesores.get(extraer_datos_fn(frase), "DESCONOCIDO")
+    cliente_detectado, _, motivo = extraer_datos_fn(frase)
+    df_clientes = obtener_hoja_clientes()
+
+    fila_cliente_df = df_clientes[df_clientes["CLIENTE"].apply(normalizar) == normalizar(cliente_detectado)]
+    if fila_cliente_df.empty:
+        raise ValueError(f"Cliente no encontrado: {cliente_detectado}")
+
+    asesor_codigo = fila_cliente_df["ASESOR/A"].values[0]
+    hoja_nombre = mapa_asesores.get(asesor_codigo)
+    if not hoja_nombre:
+        raise ValueError(f"Asesor desconocido para código '{asesor_codigo}'")
+
     hoja = spreadsheet.worksheet(hoja_nombre)
     df = pd.DataFrame(hoja.get_all_records())
 
     fila_cliente = None
     for i, row in df.iterrows():
-        if normalizar(row["CLIENTE"]) == normalizar(cliente_real):
-            fila_cliente = i + 2  # sumamos 2 por encabezado (base 0 + header fila)
+        if normalizar(row.get("CLIENTE", "")) == normalizar(cliente_real):
+            fila_cliente = i + 2
             break
 
-    # Si no existe el cliente, buscar la primera fila vacía
     if fila_cliente is None:
         for i, row in df.iterrows():
-            if not str(row["CLIENTE"]).strip():
+            if not str(row.get("CLIENTE", "")).strip():
                 fila_cliente = i + 2
                 break
 
-    # Si sigue sin encontrar fila vacía, agrega una nueva al final
     if fila_cliente is None:
         fila_cliente = len(df) + 2
         hoja.add_rows(1)
@@ -63,12 +72,13 @@ def procesar_contacto(cliente_real, fila_dummy, frase, estado, proximo_contacto,
     fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
     tipo_contacto = detectar_tipo_fn(frase)
 
-    hoja.update_cell(fila_cliente, 2, tipo_contacto)      # Columna B: Tipo
-    hoja.update_cell(fila_cliente, 3, frase)              # Columna C: Detalles
-    hoja.update_cell(fila_cliente, 4, fecha_actual)       # Columna D: Fecha último contacto
-    hoja.update_cell(fila_cliente, 5, estado)             # Columna E: Estado
-    hoja.update_cell(fila_cliente, 6, nota)               # Columna F: Notas
-    hoja.update_cell(fila_cliente, 7, proximo_contacto)   # Columna G: Próximo contacto
+    hoja.update_cell(fila_cliente, 1, cliente_real)       # A: Cliente
+    hoja.update_cell(fila_cliente, 2, tipo_contacto)       # B: Tipo
+    hoja.update_cell(fila_cliente, 3, motivo)              # C: Detalles (solo el motivo)
+    hoja.update_cell(fila_cliente, 4, fecha_actual)        # D: Fecha último contacto
+    hoja.update_cell(fila_cliente, 5, estado)              # E: Estado
+    hoja.update_cell(fila_cliente, 6, nota)                # F: Notas
+    hoja.update_cell(fila_cliente, 7, proximo_contacto)    # G: Próximo contacto
 
     return hoja_nombre
 
@@ -79,25 +89,12 @@ def marcar_contacto_como_hecho(cliente, asesor):
 
     hoja = spreadsheet.worksheet(hoja_nombre)
     df = pd.DataFrame(hoja.get_all_records())
-
     for i, row in df.iterrows():
         if normalizar(row["CLIENTE"]) == normalizar(cliente):
-            fila = i + 2  # porque los headers están en la fila 1
-            hoja.update_cell(fila, 5, "Hecho")  # Columna E (Estado)
-            hoja.update_cell(fila, 7, "")       # Columna G (Próximo contacto)
-            return
-
-    # Si no se encontró al cliente, buscar la primera fila vacía y crearla
-    for i, row in df.iterrows():
-        if not row["CLIENTE"]:  # celda vacía
             fila = i + 2
-            hoja.update_cell(fila, 1, cliente)  # A: CLIENTE
-            hoja.update_cell(fila, 5, "Hecho")  # E: Estado
-            hoja.update_cell(fila, 7, "")       # G: Próximo contacto
+            hoja.update_cell(fila, 5, "Hecho")
+            hoja.update_cell(fila, 7, "")
             return
-
-    # Si no hay filas vacías, error explícito
-    raise ValueError(f"No se encontró fila vacía para cliente '{cliente}' en hoja '{hoja_nombre}'")
 
 def obtener_recordatorios_pendientes(mail_usuario):
     codigo = mail_usuario.split("@")[0][:2].upper()
@@ -112,7 +109,7 @@ def obtener_recordatorios_pendientes(mail_usuario):
     hoy = datetime.datetime.now().date()
 
     for i, row in df.iterrows():
-        cliente = row["CLIENTE"]
+        cliente = row.get("CLIENTE", "")
         fecha_str = row.get("PRÓXIMO CONTACTO", "")
         detalle = row.get("NOTA", "")
         estado = row.get("ESTADO", "")
@@ -126,3 +123,4 @@ def obtener_recordatorios_pendientes(mail_usuario):
             except ValueError:
                 continue
     return pendientes
+
