@@ -41,44 +41,28 @@ def procesar_contacto(cliente_real, fila_dummy, frase, estado, proximo_contacto,
     cliente_detectado, _, motivo = extraer_datos_fn(frase)
     df_clientes = obtener_hoja_clientes()
 
-    fila_cliente_df = df_clientes[df_clientes["CLIENTE"].apply(normalizar) == normalizar(cliente_detectado)]
-    if fila_cliente_df.empty:
-        raise ValueError(f"Cliente no encontrado: {cliente_detectado}")
+    try:
+        _, cliente_nombre_real, asesor_codigo = buscar_cliente_normalizado(cliente_detectado, df_clientes)
+    except ValueError as e:
+        raise ValueError(f"[Procesar contacto] {e}")
 
-    asesor_codigo = fila_cliente_df["ASESOR/A"].values[0]
     hoja_nombre = mapa_asesores.get(asesor_codigo)
     if not hoja_nombre:
         raise ValueError(f"Asesor desconocido para código '{asesor_codigo}'")
 
+    fila_cliente = obtener_fila_para_cliente(cliente_real, hoja_nombre)
+
     hoja = spreadsheet.worksheet(hoja_nombre)
-    df = pd.DataFrame(hoja.get_all_records())
-
-    fila_cliente = None
-    for i, row in df.iterrows():
-        if normalizar(row.get("CLIENTE", "")) == normalizar(cliente_real):
-            fila_cliente = i + 2
-            break
-
-    if fila_cliente is None:
-        for i, row in df.iterrows():
-            if not str(row.get("CLIENTE", "")).strip():
-                fila_cliente = i + 2
-                break
-
-    if fila_cliente is None:
-        fila_cliente = len(df) + 2
-        hoja.add_rows(1)
-
     fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
     tipo_contacto = detectar_tipo_fn(frase)
 
-    hoja.update_cell(fila_cliente, 1, cliente_real)       # A: Cliente
-    hoja.update_cell(fila_cliente, 2, tipo_contacto)       # B: Tipo
-    hoja.update_cell(fila_cliente, 3, motivo)              # C: Detalles (solo el motivo)
-    hoja.update_cell(fila_cliente, 4, fecha_actual)        # D: Fecha último contacto
-    hoja.update_cell(fila_cliente, 5, estado)              # E: Estado
-    hoja.update_cell(fila_cliente, 6, nota)                # F: Notas
-    hoja.update_cell(fila_cliente, 7, proximo_contacto)    # G: Próximo contacto
+    hoja.update_cell(fila_cliente, 1, cliente_real)
+    hoja.update_cell(fila_cliente, 2, tipo_contacto)
+    hoja.update_cell(fila_cliente, 3, motivo)
+    hoja.update_cell(fila_cliente, 4, fecha_actual)
+    hoja.update_cell(fila_cliente, 5, estado)
+    hoja.update_cell(fila_cliente, 6, nota)
+    hoja.update_cell(fila_cliente, 7, proximo_contacto)
 
     return hoja_nombre
 
@@ -123,4 +107,32 @@ def obtener_recordatorios_pendientes(mail_usuario):
             except ValueError:
                 continue
     return pendientes
+    
+    def buscar_cliente_normalizado(nombre_cliente, df_clientes):
+        coincidencias = [
+            (i + 2, row["CLIENTE"], row["ASESOR/A"])
+            for i, row in df_clientes.iterrows()
+            if normalizar(row["CLIENTE"]) == normalizar(nombre_cliente)
+        ]
+        if len(coincidencias) == 1:
+            return coincidencias[0]  # fila, cliente_real, asesor
+        elif not coincidencias:
+            raise ValueError(f"No se encontró al cliente: {nombre_cliente}")
+        else:
+            raise ValueError(f"Se encontraron múltiples coincidencias para: {nombre_cliente}")
 
+    def obtener_fila_para_cliente(cliente_real, hoja_nombre):
+        hoja = spreadsheet.worksheet(hoja_nombre)
+        df = pd.DataFrame(hoja.get_all_records())
+
+        for i, row in df.iterrows():
+            if normalizar(row.get("CLIENTE", "")) == normalizar(cliente_real):
+                return i + 2
+
+        for i, row in df.iterrows():
+            if not str(row.get("CLIENTE", "")).strip():
+                return i + 2
+
+        nueva_fila = len(df) + 2
+        hoja.add_rows(1)
+        return nueva_fila
