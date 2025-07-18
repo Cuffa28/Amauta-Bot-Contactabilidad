@@ -74,12 +74,25 @@ def marcar_contacto_como_hecho(cliente, asesor):
 
     hoja = spreadsheet.worksheet(hoja_nombre)
     df = pd.DataFrame(hoja.get_all_records())
+
     for i, row in df.iterrows():
         if normalizar(row["CLIENTE"]) == normalizar(cliente):
-            fila = i + 2
-            hoja.update_cell(fila, 6, "Hecho")
-            hoja.update_cell(fila, 11, "")
+            fila = i + 2  # porque los headers están en la fila 1
+            hoja.update_cell(fila, 5, "Hecho")  # Columna E (Estado)
+            hoja.update_cell(fila, 7, "")       # Columna G (Próximo contacto)
             return
+
+    # Si no se encontró al cliente, buscar la primera fila vacía y crearla
+    for i, row in df.iterrows():
+        if not row["CLIENTE"]:  # celda vacía
+            fila = i + 2
+            hoja.update_cell(fila, 1, cliente)  # A: CLIENTE
+            hoja.update_cell(fila, 5, "Hecho")  # E: Estado
+            hoja.update_cell(fila, 7, "")       # G: Próximo contacto
+            return
+
+    # Si no hay filas vacías, error explícito
+    raise ValueError(f"No se encontró fila vacía para cliente '{cliente}' en hoja '{hoja_nombre}'")
 
 def obtener_recordatorios_pendientes(mail_usuario):
     codigo = mail_usuario.split("@")[0][:2].upper()
