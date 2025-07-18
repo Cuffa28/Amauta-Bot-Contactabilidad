@@ -134,5 +134,5 @@ def obtener_fila_para_cliente(cliente_real, hoja_nombre):
             return i + 2
 
     nueva_fila = len(df) + 2
-    hoja.add_rows(1)
+    hoja.append_row([""] * 7)  # 🔧 Esto garantiza que la fila "exista"
     return nueva_fila
