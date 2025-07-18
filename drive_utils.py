@@ -38,32 +38,44 @@ def obtener_hoja_nombre(codigo_asesor):
     return mapa_asesores.get(codigo_asesor, "DESCONOCIDO")
 
 def procesar_contacto(cliente_real, fila_dummy, frase, estado, proximo_contacto, nota, extraer_datos_fn, detectar_tipo_fn):
-    hoja_nombre = mapa_asesores.get(extraer_datos_fn(frase), "DESCONOCIDO")
-    hoja = spreadsheet.worksheet(hoja_nombre)
-    df = pd.DataFrame(hoja.get_all_records())
+    df_clientes = obtener_hoja_clientes()
+    
+    try:
+        fila_cliente = df_clientes[df_clientes["CLIENTE"].apply(normalizar) == normalizar(cliente_real)].index[0]
+    except IndexError:
+        raise ValueError(f"Cliente no encontrado: {cliente_real}")
 
-    # Buscar primera fila vacía (donde no hay cliente)
+    codigo_asesor = df_clientes.iloc[fila_cliente]["ASESOR/A"]
+    hoja_nombre = mapa_asesores.get(codigo_asesor)
+    if not hoja_nombre:
+        raise ValueError(f"Asesor desconocido: {codigo_asesor}")
+    
+    hoja = spreadsheet.worksheet(hoja_nombre)
+    df_hoja = pd.DataFrame(hoja.get_all_records())
+
+    # Buscar fila vacía (sin cliente)
     fila_disponible = None
-    for i, row in df.iterrows():
+    for i, row in df_hoja.iterrows():
         if not str(row.get("CLIENTE", "")).strip():
-            fila_disponible = i + 2  # sumar 2 por el header y base 0
+            fila_disponible = i + 2  # sumar 2 por encabezado + base 0
             break
 
-    # Si no hay fila vacía, agregar una nueva
+    # Si no hay fila vacía, usar nueva al final
     if fila_disponible is None:
-        fila_disponible = len(df) + 2
+        fila_disponible = len(df_hoja) + 2
         hoja.add_rows(1)
 
+    # Escribir datos
     fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
     tipo_contacto = detectar_tipo_fn(frase)
 
-    hoja.update_cell(fila_disponible, 1, cliente_real)        # CLIENTE (col A)
-    hoja.update_cell(fila_disponible, 2, tipo_contacto)        # Tipo (col B)
-    hoja.update_cell(fila_disponible, 3, frase)                # Detalles (col C)
-    hoja.update_cell(fila_disponible, 4, fecha_actual)         # Fecha último contacto (col D)
-    hoja.update_cell(fila_disponible, 5, estado)               # Estado (col E)
-    hoja.update_cell(fila_disponible, 6, nota)                 # Notas (col F)
-    hoja.update_cell(fila_disponible, 7, proximo_contacto)     # Próximo contacto (col G)
+    hoja.update_cell(fila_disponible, 1, cliente_real)       # Col A: Cliente
+    hoja.update_cell(fila_disponible, 2, tipo_contacto)       # Col B: Tipo
+    hoja.update_cell(fila_disponible, 3, frase)               # Col C: Detalles
+    hoja.update_cell(fila_disponible, 4, fecha_actual)        # Col D: Fecha último contacto
+    hoja.update_cell(fila_disponible, 5, estado)              # Col E: Estado
+    hoja.update_cell(fila_disponible, 6, nota)                # Col F: Notas
+    hoja.update_cell(fila_disponible, 7, proximo_contacto)    # Col G: Próximo contacto
 
     return hoja_nombre
 
