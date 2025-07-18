@@ -44,6 +44,11 @@ recordatorios = obtener_recordatorios_pendientes(st.session_state.mail_ingresado
 vencen_hoy = [r for r in recordatorios if r[4] == "pendiente"]
 
 if vencen_hoy and not st.session_state.popup_oculto:
+    clientes_html = "".join([
+        f"<li><b>{c}</b> – {f} – {n if n else '-'} </li>"
+        for c, _, f, n, _ in vencen_hoy
+    ])
+
     with st.container():
         st.markdown(
             f"""
@@ -61,10 +66,10 @@ if vencen_hoy and not st.session_state.popup_oculto:
             '>
                 <b>📣 ¡Tenés contactos que vencen hoy!</b>
                 <ul style='margin-top: 10px; padding-left: 20px; font-size: 0.9rem;'>
-                    {"".join([f"<li><b>{c}</b> – {f} – {n if n else '-'} </li>" for c, _, f, n, _ in vencen_hoy])}
+                    {clientes_html}
                 </ul>
             </div>
-            \"\"\",
+            """,
             unsafe_allow_html=True
         )
         if st.button("❌ Cerrar recordatorios", key="cerrar_popup"):
