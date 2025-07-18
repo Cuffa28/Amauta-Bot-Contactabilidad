@@ -109,15 +109,27 @@ def obtener_recordatorios_pendientes(mail_usuario):
     return pendientes
 
 def buscar_cliente_normalizado(nombre_cliente, df_clientes):
-    coincidencias = [
+    normal_input = normalizar(nombre_cliente)
+
+    # Coincidencias exactas
+    exactas = [
         (i + 2, row["CLIENTE"], row["ASESOR/A"])
         for i, row in df_clientes.iterrows()
-        if normalizar(nombre_cliente) in normalizar(row["CLIENTE"])
-           or normalizar(row["CLIENTE"]) in normalizar(nombre_cliente)
+        if normalizar(row["CLIENTE"]) == normal_input
     ]
-    if len(coincidencias) == 1:
-        return coincidencias[0]  # fila, cliente_real, asesor
-    elif not coincidencias:
+    if len(exactas) == 1:
+        return exactas[0]
+
+    # Coincidencias parciales solo si hay una
+    parciales = [
+        (i + 2, row["CLIENTE"], row["ASESOR/A"])
+        for i, row in df_clientes.iterrows()
+        if normal_input in normalizar(row["CLIENTE"]) or normalizar(row["CLIENTE"]) in normal_input
+    ]
+    if len(parciales) == 1:
+        return parciales[0]
+
+    if not exactas and not parciales:
         raise ValueError(f"No se encontró al cliente: {nombre_cliente}")
     else:
         raise ValueError(f"Se encontraron múltiples coincidencias para: {nombre_cliente}")
