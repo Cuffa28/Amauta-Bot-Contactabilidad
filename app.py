@@ -73,7 +73,7 @@ if vencen_hoy and not st.session_state.popup_oculto:
         </button>
     </div>
     """
-    html(contenido_popup, height=70)
+    html(contenido_popup, height=150)
 
 tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 
