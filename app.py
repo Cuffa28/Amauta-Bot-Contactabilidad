@@ -48,32 +48,43 @@ with tabs[0]:
 
     df_clientes = obtener_hoja_clientes()
 
+    # 🔔 ALERTA: Recordatorios que vencen hoy
+    if "alerta_hoy_visible" not in st.session_state:
+        st.session_state.alerta_hoy_visible = True
+
+    recordatorios = obtener_recordatorios_pendientes(st.session_state.mail_ingresado)
+    vencen_hoy = [r for r in recordatorios if r[4] == "pendiente"]
+
+    if vencen_hoy and st.session_state.alerta_hoy_visible:
+        with st.container():
+            st.warning("📣 **¡Tenés contactos que vencen hoy!**")
+            for cliente, _, fecha, nota, _ in vencen_hoy:
+                st.markdown(f"- **{cliente}** – fecha: **{fecha}**. Motivo: {nota or '-'}")
+            if st.button("❌ Cerrar alerta"):
+                st.session_state.alerta_hoy_visible = False
+
+
     def buscar_coincidencia(cliente_input):
         normal_input = normalizar(cliente_input)
-
         exactas = [
             (i + 2, row["CLIENTE"], row["ASESOR/A"])
             for i, row in df_clientes.iterrows()
             if normalizar(row["CLIENTE"]) == normal_input
         ]
         if exactas:
-            return exactas
+            return exactas  # devuelve aunque haya varias exactas
 
-        parciales = []
-        for i, row in df_clientes.iterrows():
-            nombre = row["CLIENTE"]
-            norm_nombre = normalizar(nombre)
-            if normal_input in norm_nombre or norm_nombre in normal_input:
-                distancia = abs(len(norm_nombre) - len(normal_input))
-                parciales.append((i + 2, nombre, row["ASESOR/A"], distancia))
-
+        parciales = [
+            (i + 2, row["CLIENTE"], row["ASESOR/A"])
+            for i, row in df_clientes.iterrows()
+            if normal_input in normalizar(row["CLIENTE"]) or normalizar(row["CLIENTE"]) in normal_input
+        ]
         if len(parciales) == 1:
-            return [parciales[0][:3]]
+            return parciales
 
+        # 🚨 Nueva mejora: si hay múltiples coincidencias, mostrar sugerencias
         if len(parciales) > 1:
-            # Ordenamos por menor distancia de longitud y luego alfabéticamente
-            parciales_ordenadas = sorted(parciales, key=lambda x: (x[3], x[1]))
-            nombres = [p[1] for p in parciales_ordenadas]
+            nombres = [c[1] for c in parciales]
             raise ValueError(f"Coincidencias múltiples para '{cliente_input}': {', '.join(nombres)}")
 
         raise ValueError(f"No se encontró ninguna coincidencia para '{cliente_input}'.")
@@ -210,7 +221,7 @@ with tabs[1]:
             if cols[1].button("✔️ Hecho", key=f"recordatorio_hecho_{i}"):
                 try:
                     marcar_contacto_como_hecho(cliente, asesor)
-                    st.rerun()
+                    st.experimental_rerun()
                 except Exception as e:
                     st.error(f"⚠️ {e}")
     else:
