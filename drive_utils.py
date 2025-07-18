@@ -6,23 +6,16 @@ import gspread
 from google.oauth2.service_account import Credentials
 import unicodedata
 
+# -------------------- Normalización --------------------
+
 def normalizar(texto):
     texto = texto.upper().replace(".", "").replace(",", "").strip()
     texto = unicodedata.normalize('NFD', texto).encode('ascii', 'ignore').decode('utf-8')
     return texto
 
+# -------------------- Configuración --------------------
+
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds_json = os.environ.get("GOOGLE_CREDS_JSON")
-if not creds_json:
-    raise ValueError("La variable de entorno GOOGLE_CREDS_JSON no está definida.")
-
-info = json.loads(creds_json)
-creds = Credentials.from_service_account_info(info, scopes=SCOPE)
-client = gspread.authorize(creds)
-
-spreadsheet = client.open("Esquema Comercial")
-hoja_clientes = spreadsheet.worksheet("CLIENTES")
-
 mapa_asesores = {
     "FA": "FACUNDO",
     "FL": "FLORENCIA",
@@ -31,13 +24,34 @@ mapa_asesores = {
     "JC": "JERONIMO"
 }
 
+client = None
+spreadsheet = None
+
+def inicializar_client():
+    global client, spreadsheet
+    if client and spreadsheet:
+        return
+
+    creds_json = os.environ.get("GOOGLE_CREDS_JSON")
+    if not creds_json:
+        raise ValueError("La variable de entorno GOOGLE_CREDS_JSON no está definida.")
+
+    info = json.loads(creds_json)
+    creds = Credentials.from_service_account_info(info, scopes=SCOPE)
+    client = gspread.authorize(creds)
+    spreadsheet = client.open("Esquema Comercial")
+
+# -------------------- Funciones principales --------------------
+
 def obtener_hoja_clientes():
-    return pd.DataFrame(hoja_clientes.get_all_records())
+    inicializar_client()
+    return pd.DataFrame(spreadsheet.worksheet("CLIENTES").get_all_records())
 
 def obtener_hoja_nombre(codigo_asesor):
     return mapa_asesores.get(codigo_asesor, "DESCONOCIDO")
 
 def procesar_contacto(cliente_real, fila_dummy, frase, estado, proximo_contacto, nota, extraer_datos_fn, detectar_tipo_fn):
+    inicializar_client()
     cliente_detectado, _, motivo = extraer_datos_fn(frase)
     df_clientes = obtener_hoja_clientes()
 
@@ -50,9 +64,8 @@ def procesar_contacto(cliente_real, fila_dummy, frase, estado, proximo_contacto,
     if not hoja_nombre:
         raise ValueError(f"Asesor desconocido para código '{asesor_codigo}'")
 
-    fila_cliente = obtener_fila_para_cliente(cliente_real, hoja_nombre)
-
     hoja = spreadsheet.worksheet(hoja_nombre)
+    fila_cliente = obtener_fila_para_cliente(cliente_real, hoja_nombre)
     fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
     tipo_contacto = detectar_tipo_fn(frase)
 
@@ -67,6 +80,7 @@ def procesar_contacto(cliente_real, fila_dummy, frase, estado, proximo_contacto,
     return hoja_nombre
 
 def marcar_contacto_como_hecho(cliente, asesor):
+    inicializar_client()
     hoja_nombre = mapa_asesores.get(asesor)
     if not hoja_nombre:
         raise ValueError("Asesor desconocido")
@@ -81,6 +95,7 @@ def marcar_contacto_como_hecho(cliente, asesor):
             return
 
 def obtener_recordatorios_pendientes(mail_usuario):
+    inicializar_client()
     codigo = mail_usuario.split("@")[0][:2].upper()
     hoja_nombre = mapa_asesores.get(codigo)
     if not hoja_nombre:
@@ -111,7 +126,6 @@ def obtener_recordatorios_pendientes(mail_usuario):
 def buscar_cliente_normalizado(nombre_cliente, df_clientes):
     normal_input = normalizar(nombre_cliente)
 
-    # Coincidencias exactas
     exactas = [
         (i + 2, row["CLIENTE"], row["ASESOR/A"])
         for i, row in df_clientes.iterrows()
@@ -120,7 +134,6 @@ def buscar_cliente_normalizado(nombre_cliente, df_clientes):
     if len(exactas) == 1:
         return exactas[0]
 
-    # Coincidencias parciales solo si hay una
     parciales = [
         (i + 2, row["CLIENTE"], row["ASESOR/A"])
         for i, row in df_clientes.iterrows()
@@ -135,6 +148,7 @@ def buscar_cliente_normalizado(nombre_cliente, df_clientes):
         raise ValueError(f"Se encontraron múltiples coincidencias para: {nombre_cliente}")
 
 def obtener_fila_para_cliente(cliente_real, hoja_nombre):
+    inicializar_client()
     hoja = spreadsheet.worksheet(hoja_nombre)
     df = pd.DataFrame(hoja.get_all_records())
 
@@ -147,5 +161,5 @@ def obtener_fila_para_cliente(cliente_real, hoja_nombre):
             return i + 2
 
     nueva_fila = len(df) + 2
-    hoja.append_row([""] * 7)  # 🔧 Esto garantiza que la fila "exista"
+    hoja.append_row([""] * 7)
     return nueva_fila
