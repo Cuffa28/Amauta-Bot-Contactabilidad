@@ -136,11 +136,12 @@ def buscar_cliente_normalizado(nombre_cliente, df_clientes):
     if len(exactas) == 1:
         return exactas[0]
 
-    parciales = [
+    parciales = list({
         (i + 2, row["CLIENTE"], row["ASESOR/A"])
         for i, row in df_clientes.iterrows()
         if normal_input in normalizar(row["CLIENTE"]) or normalizar(row["CLIENTE"]) in normal_input
-    ]
+    })
+    parciales = sorted(parciales, key=lambda x: x[1])
     if len(parciales) == 1:
         return parciales[0]
 
@@ -162,6 +163,8 @@ def obtener_fila_para_cliente(cliente_real, hoja_nombre):
         if not str(row.get("CLIENTE", "")).strip():
             return i + 2
 
-    nueva_fila = len(df) + 2
-    hoja.append_row([""] * 7)
-    return nueva_fila
+    fecha = datetime.datetime.now().strftime("%d/%m/%Y")
+    hoja.append_row([
+        cliente_real, "", "", fecha, "", "", ""
+    ])
+    return len(df) + 2
