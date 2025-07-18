@@ -37,24 +37,33 @@ def obtener_hoja_clientes():
 def obtener_hoja_nombre(codigo_asesor):
     return mapa_asesores.get(codigo_asesor, "DESCONOCIDO")
 
-def procesar_contacto(cliente_real, fila, frase, estado, proximo_contacto, nota, extraer_datos_fn, detectar_tipo_fn):
+def procesar_contacto(cliente_real, fila_dummy, frase, estado, proximo_contacto, nota, extraer_datos_fn, detectar_tipo_fn):
     hoja_nombre = mapa_asesores.get(extraer_datos_fn(frase), "DESCONOCIDO")
     hoja = spreadsheet.worksheet(hoja_nombre)
+    df = pd.DataFrame(hoja.get_all_records())
+
+    # Buscar primera fila vacía (donde no hay cliente)
+    fila_disponible = None
+    for i, row in df.iterrows():
+        if not str(row.get("CLIENTE", "")).strip():
+            fila_disponible = i + 2  # sumar 2 por el header y base 0
+            break
+
+    # Si no hay fila vacía, agregar una nueva
+    if fila_disponible is None:
+        fila_disponible = len(df) + 2
+        hoja.add_rows(1)
+
     fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
     tipo_contacto = detectar_tipo_fn(frase)
 
-    # Columnas:
-    # C: Detalles (col 3)
-    # D: Fecha último contacto (col 4)
-    # E: Estado (col 5)
-    # F: Notas (col 6)
-    # G: Próximo contacto (col 7)
-
-    hoja.update_cell(fila, 3, frase)              # Detalles
-    hoja.update_cell(fila, 4, fecha_actual)       # Fecha último contacto
-    hoja.update_cell(fila, 5, estado)             # Estado
-    hoja.update_cell(fila, 6, nota)               # Notas
-    hoja.update_cell(fila, 7, proximo_contacto)   # Próximo contacto
+    hoja.update_cell(fila_disponible, 1, cliente_real)        # CLIENTE (col A)
+    hoja.update_cell(fila_disponible, 2, tipo_contacto)        # Tipo (col B)
+    hoja.update_cell(fila_disponible, 3, frase)                # Detalles (col C)
+    hoja.update_cell(fila_disponible, 4, fecha_actual)         # Fecha último contacto (col D)
+    hoja.update_cell(fila_disponible, 5, estado)               # Estado (col E)
+    hoja.update_cell(fila_disponible, 6, nota)                 # Notas (col F)
+    hoja.update_cell(fila_disponible, 7, proximo_contacto)     # Próximo contacto (col G)
 
     return hoja_nombre
 
