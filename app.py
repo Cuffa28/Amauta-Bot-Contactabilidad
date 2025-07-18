@@ -46,7 +46,7 @@ vencen_hoy = [r for r in recordatorios if r[4] == "pendiente"]
 if vencen_hoy and not st.session_state.popup_oculto:
     with st.container():
         st.markdown(
-            f\"\"\"
+            f"""
             <div style='
                 position: relative;
                 margin-bottom: 10px;
