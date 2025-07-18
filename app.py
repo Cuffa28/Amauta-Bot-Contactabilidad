@@ -48,30 +48,30 @@ with tabs[0]:
 
     df_clientes = obtener_hoja_clientes()
 
-def buscar_coincidencia(cliente_input):
-    normal_input = normalizar(cliente_input)
-    exactas = [
-        (i + 2, row["CLIENTE"], row["ASESOR/A"])
-        for i, row in df_clientes.iterrows()
-        if normalizar(row["CLIENTE"]) == normal_input
-    ]
-    if exactas:
-        return exactas  # devuelve aunque haya varias exactas
+    def buscar_coincidencia(cliente_input):
+        normal_input = normalizar(cliente_input)
+        exactas = [
+            (i + 2, row["CLIENTE"], row["ASESOR/A"])
+            for i, row in df_clientes.iterrows()
+            if normalizar(row["CLIENTE"]) == normal_input
+        ]
+        if exactas:
+            return exactas  # devuelve aunque haya varias exactas
 
-    parciales = [
-        (i + 2, row["CLIENTE"], row["ASESOR/A"])
-        for i, row in df_clientes.iterrows()
-        if normal_input in normalizar(row["CLIENTE"]) or normalizar(row["CLIENTE"]) in normal_input
-    ]
-    if len(parciales) == 1:
-        return parciales
+        parciales = [
+            (i + 2, row["CLIENTE"], row["ASESOR/A"])
+            for i, row in df_clientes.iterrows()
+            if normal_input in normalizar(row["CLIENTE"]) or normalizar(row["CLIENTE"]) in normal_input
+        ]
+        if len(parciales) == 1:
+            return parciales
 
-    # 🚨 Nueva mejora: si hay múltiples coincidencias, mostrar sugerencias
-    if len(parciales) > 1:
-        nombres = [c[1] for c in parciales]
-        raise ValueError(f"Coincidencias múltiples para '{cliente_input}': {', '.join(nombres)}")
+        # 🚨 Nueva mejora: si hay múltiples coincidencias, mostrar sugerencias
+        if len(parciales) > 1:
+            nombres = [c[1] for c in parciales]
+            raise ValueError(f"Coincidencias múltiples para '{cliente_input}': {', '.join(nombres)}")
 
-    raise ValueError(f"No se encontró ninguna coincidencia para '{cliente_input}'.")
+        raise ValueError(f"No se encontró ninguna coincidencia para '{cliente_input}'.")
 
     # --- Modo: Carga guiada ---
     if modo_carga == "Carga guiada":
