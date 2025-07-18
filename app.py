@@ -151,9 +151,17 @@ with tabs[0]:
             try:
                 if modo_carga == "Carga guiada":
                     cliente_input = cliente_seleccionado
+
+                    # Validación extra (opcional pero recomendada)
+                    if not cliente_input or not motivo_contacto:
+                        st.warning("⚠️ Completá todos los campos requeridos.")
+                        st.stop()
+
+                    # Construcción de frase para guardar
+                    frase = f"Se realizó una {tipo_contacto.lower()} con {cliente_input} el {fecha_contacto.strftime('%d/%m/%Y')} por {motivo_contacto.strip().lower()}"
                 else:
                     cliente_input, _, _ = extraer_datos(frase)
-
+                    
                 matches = [
                     (i + 2, row["CLIENTE"], row["ASESOR/A"])
                     for i, row in df_clientes.iterrows()
