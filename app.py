@@ -144,11 +144,15 @@ with tabs[0]:
         df_historial = pd.DataFrame.from_records(st.session_state.historial)
         st.dataframe(df_historial, use_container_width=True)
 
+    from historial import cargar_historial_completo, formatear_historial_exportable  # 👈 asegurate que esté arriba
+
     st.subheader("📥 Descargar historial completo")
     df_completo = cargar_historial_completo()
+    df_exportado = formatear_historial_exportable(df_completo)
+
     st.download_button(
         label="⬇️ Descargar historial",
-        data=df_completo.to_csv(index=False).encode("utf-8"),
+        data=df_exportado.to_csv(index=False).encode("utf-8"),
         file_name="historial_contactos.csv",
         mime="text/csv"
     )
