@@ -112,7 +112,8 @@ def buscar_cliente_normalizado(nombre_cliente, df_clientes):
     coincidencias = [
         (i + 2, row["CLIENTE"], row["ASESOR/A"])
         for i, row in df_clientes.iterrows()
-        if normalizar(row["CLIENTE"]) == normalizar(nombre_cliente)
+        if normalizar(nombre_cliente) in normalizar(row["CLIENTE"])
+           or normalizar(row["CLIENTE"]) in normalizar(nombre_cliente)
     ]
     if len(coincidencias) == 1:
         return coincidencias[0]  # fila, cliente_real, asesor
