@@ -50,25 +50,30 @@ with tabs[0]:
 
     def buscar_coincidencia(cliente_input):
         normal_input = normalizar(cliente_input)
+
         exactas = [
             (i + 2, row["CLIENTE"], row["ASESOR/A"])
             for i, row in df_clientes.iterrows()
             if normalizar(row["CLIENTE"]) == normal_input
         ]
         if exactas:
-            return exactas  # devuelve aunque haya varias exactas
+            return exactas
 
-        parciales = [
-            (i + 2, row["CLIENTE"], row["ASESOR/A"])
-            for i, row in df_clientes.iterrows()
-            if normal_input in normalizar(row["CLIENTE"]) or normalizar(row["CLIENTE"]) in normal_input
-        ]
+        parciales = []
+        for i, row in df_clientes.iterrows():
+            nombre = row["CLIENTE"]
+            norm_nombre = normalizar(nombre)
+            if normal_input in norm_nombre or norm_nombre in normal_input:
+                distancia = abs(len(norm_nombre) - len(normal_input))
+                parciales.append((i + 2, nombre, row["ASESOR/A"], distancia))
+
         if len(parciales) == 1:
-            return parciales
+            return [parciales[0][:3]]
 
-        # 🚨 Nueva mejora: si hay múltiples coincidencias, mostrar sugerencias
         if len(parciales) > 1:
-            nombres = [c[1] for c in parciales]
+            # Ordenamos por menor distancia de longitud y luego alfabéticamente
+            parciales_ordenadas = sorted(parciales, key=lambda x: (x[3], x[1]))
+            nombres = [p[1] for p in parciales_ordenadas]
             raise ValueError(f"Coincidencias múltiples para '{cliente_input}': {', '.join(nombres)}")
 
         raise ValueError(f"No se encontró ninguna coincidencia para '{cliente_input}'.")
