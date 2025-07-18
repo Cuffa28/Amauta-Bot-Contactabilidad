@@ -107,32 +107,32 @@ def obtener_recordatorios_pendientes(mail_usuario):
             except ValueError:
                 continue
     return pendientes
-    
-    def buscar_cliente_normalizado(nombre_cliente, df_clientes):
-        coincidencias = [
-            (i + 2, row["CLIENTE"], row["ASESOR/A"])
-            for i, row in df_clientes.iterrows()
-            if normalizar(row["CLIENTE"]) == normalizar(nombre_cliente)
-        ]
-        if len(coincidencias) == 1:
-            return coincidencias[0]  # fila, cliente_real, asesor
-        elif not coincidencias:
-            raise ValueError(f"No se encontró al cliente: {nombre_cliente}")
-        else:
-            raise ValueError(f"Se encontraron múltiples coincidencias para: {nombre_cliente}")
 
-    def obtener_fila_para_cliente(cliente_real, hoja_nombre):
-        hoja = spreadsheet.worksheet(hoja_nombre)
-        df = pd.DataFrame(hoja.get_all_records())
+def buscar_cliente_normalizado(nombre_cliente, df_clientes):
+    coincidencias = [
+        (i + 2, row["CLIENTE"], row["ASESOR/A"])
+        for i, row in df_clientes.iterrows()
+        if normalizar(row["CLIENTE"]) == normalizar(nombre_cliente)
+    ]
+    if len(coincidencias) == 1:
+        return coincidencias[0]  # fila, cliente_real, asesor
+    elif not coincidencias:
+        raise ValueError(f"No se encontró al cliente: {nombre_cliente}")
+    else:
+        raise ValueError(f"Se encontraron múltiples coincidencias para: {nombre_cliente}")
 
-        for i, row in df.iterrows():
-            if normalizar(row.get("CLIENTE", "")) == normalizar(cliente_real):
-                return i + 2
+def obtener_fila_para_cliente(cliente_real, hoja_nombre):
+    hoja = spreadsheet.worksheet(hoja_nombre)
+    df = pd.DataFrame(hoja.get_all_records())
 
-        for i, row in df.iterrows():
-            if not str(row.get("CLIENTE", "")).strip():
-                return i + 2
+    for i, row in df.iterrows():
+        if normalizar(row.get("CLIENTE", "")) == normalizar(cliente_real):
+            return i + 2
 
-        nueva_fila = len(df) + 2
-        hoja.add_rows(1)
-        return nueva_fila
+    for i, row in df.iterrows():
+        if not str(row.get("CLIENTE", "")).strip():
+            return i + 2
+
+    nueva_fila = len(df) + 2
+    hoja.add_rows(1)
+    return nueva_fila
