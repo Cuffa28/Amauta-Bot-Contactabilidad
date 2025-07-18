@@ -38,44 +38,37 @@ def obtener_hoja_nombre(codigo_asesor):
     return mapa_asesores.get(codigo_asesor, "DESCONOCIDO")
 
 def procesar_contacto(cliente_real, fila_dummy, frase, estado, proximo_contacto, nota, extraer_datos_fn, detectar_tipo_fn):
-    df_clientes = obtener_hoja_clientes()
-    
-    try:
-        fila_cliente = df_clientes[df_clientes["CLIENTE"].apply(normalizar) == normalizar(cliente_real)].index[0]
-    except IndexError:
-        raise ValueError(f"Cliente no encontrado: {cliente_real}")
-
-    codigo_asesor = df_clientes.iloc[fila_cliente]["ASESOR/A"]
-    hoja_nombre = mapa_asesores.get(codigo_asesor)
-    if not hoja_nombre:
-        raise ValueError(f"Asesor desconocido: {codigo_asesor}")
-    
+    hoja_nombre = mapa_asesores.get(extraer_datos_fn(frase), "DESCONOCIDO")
     hoja = spreadsheet.worksheet(hoja_nombre)
-    df_hoja = pd.DataFrame(hoja.get_all_records())
+    df = pd.DataFrame(hoja.get_all_records())
 
-    # Buscar fila vacía (sin cliente)
-    fila_disponible = None
-    for i, row in df_hoja.iterrows():
-        if not str(row.get("CLIENTE", "")).strip():
-            fila_disponible = i + 2  # sumar 2 por encabezado + base 0
+    fila_cliente = None
+    for i, row in df.iterrows():
+        if normalizar(row["CLIENTE"]) == normalizar(cliente_real):
+            fila_cliente = i + 2  # sumamos 2 por encabezado (base 0 + header fila)
             break
 
-    # Si no hay fila vacía, usar nueva al final
-    if fila_disponible is None:
-        fila_disponible = len(df_hoja) + 2
+    # Si no existe el cliente, buscar la primera fila vacía
+    if fila_cliente is None:
+        for i, row in df.iterrows():
+            if not str(row["CLIENTE"]).strip():
+                fila_cliente = i + 2
+                break
+
+    # Si sigue sin encontrar fila vacía, agrega una nueva al final
+    if fila_cliente is None:
+        fila_cliente = len(df) + 2
         hoja.add_rows(1)
 
-    # Escribir datos
     fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
     tipo_contacto = detectar_tipo_fn(frase)
 
-    hoja.update_cell(fila_disponible, 1, cliente_real)       # Col A: Cliente
-    hoja.update_cell(fila_disponible, 2, tipo_contacto)       # Col B: Tipo
-    hoja.update_cell(fila_disponible, 3, frase)               # Col C: Detalles
-    hoja.update_cell(fila_disponible, 4, fecha_actual)        # Col D: Fecha último contacto
-    hoja.update_cell(fila_disponible, 5, estado)              # Col E: Estado
-    hoja.update_cell(fila_disponible, 6, nota)                # Col F: Notas
-    hoja.update_cell(fila_disponible, 7, proximo_contacto)    # Col G: Próximo contacto
+    hoja.update_cell(fila_cliente, 2, tipo_contacto)      # Columna B: Tipo
+    hoja.update_cell(fila_cliente, 3, frase)              # Columna C: Detalles
+    hoja.update_cell(fila_cliente, 4, fecha_actual)       # Columna D: Fecha último contacto
+    hoja.update_cell(fila_cliente, 5, estado)             # Columna E: Estado
+    hoja.update_cell(fila_cliente, 6, nota)               # Columna F: Notas
+    hoja.update_cell(fila_cliente, 7, proximo_contacto)   # Columna G: Próximo contacto
 
     return hoja_nombre
 
