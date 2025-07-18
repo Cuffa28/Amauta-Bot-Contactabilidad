@@ -64,7 +64,7 @@ with tabs[0]:
         contenido_popup = f"""
         <div id=\"popup-alerta\" style=\"
             position: fixed;
-            top: 20px;
+            top: 10px;
             left: 20px;
             background-color: #fff3cd;
             color: #856404;
