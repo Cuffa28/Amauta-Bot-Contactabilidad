@@ -48,6 +48,23 @@ with tabs[0]:
 
     df_clientes = obtener_hoja_clientes()
 
+    def buscar_coincidencia(cliente_input):
+        normal_input = normalizar(cliente_input)
+        exactas = [
+            (i + 2, row["CLIENTE"], row["ASESOR/A"])
+            for i, row in df_clientes.iterrows()
+            if normalizar(row["CLIENTE"]) == normal_input
+        ]
+        if exactas:
+            return exactas
+
+        parciales = [
+            (i + 2, row["CLIENTE"], row["ASESOR/A"])
+            for i, row in df_clientes.iterrows()
+            if normal_input in normalizar(row["CLIENTE"]) or normalizar(row["CLIENTE"]) in normal_input
+        ]
+        return parciales if len(parciales) == 1 else []
+
     # --- Modo: Carga guiada ---
     if modo_carga == "Carga guiada":
         nombres = sorted(df_clientes["CLIENTE"].unique())
@@ -85,11 +102,7 @@ with tabs[0]:
             try:
                 fh = datetime.today().strftime("%d/%m/%Y")
                 frase = f"Se realizó una {tipo_flash.lower()} con {cliente_flash} el {fh} por {motivo_flash.strip().lower()}"
-                coincidencias = [
-                    (i + 2, row["CLIENTE"], row["ASESOR/A"])
-                    for i, row in df_clientes.iterrows()
-                    if normalizar(row["CLIENTE"]) == normalizar(cliente_flash)
-                ]
+                coincidencias = buscar_coincidencia(cliente_flash)
                 if len(coincidencias) == 1:
                     _, cliente_real, asesor = coincidencias[0]
                     hoja = procesar_contacto(cliente_real, _, frase, "Hecho", "", nota_flash, extraer_datos, detectar_tipo)
@@ -117,18 +130,14 @@ with tabs[0]:
             for idx, l in enumerate(texto_masivo.split("\n"), start=1):
                 try:
                     c, _, _ = extraer_datos(l)
-                    matches = [
-                        (j + 2, row["CLIENTE"], row["ASESOR/A"])
-                        for j, row in df_clientes.iterrows()
-                        if normalizar(row["CLIENTE"]) == normalizar(c)
-                    ]
+                    matches = buscar_coincidencia(c)
                     if len(matches) == 1:
                         _, creal, asesor = matches[0]
                         hoja = procesar_contacto(creal, _, l, estado_masivo, prox, nota_masiva, extraer_datos, detectar_tipo)
                         guardar_en_historial(creal, hoja, l, estado_masivo, nota_masiva, prox)
                         exitosos += 1
                     else:
-                        fallidos.append(f"Línea {idx}: cliente no encontrado")
+                        fallidos.append(f"Línea {idx}: cliente no encontrado o ambigüo")
                 except Exception as e:
                     fallidos.append(f"Línea {idx}: {e}")
             st.success(f"✅ {exitosos} contactos cargados.")
@@ -152,21 +161,16 @@ with tabs[0]:
                 if modo_carga == "Carga guiada":
                     cliente_input = cliente_seleccionado
 
-                    # Validación extra (opcional pero recomendada)
                     if not cliente_input or not motivo_contacto:
                         st.warning("⚠️ Completá todos los campos requeridos.")
                         st.stop()
 
-                    # Construcción de frase para guardar
                     frase = f"Se realizó una {tipo_contacto.lower()} con {cliente_input} el {fecha_contacto.strftime('%d/%m/%Y')} por {motivo_contacto.strip().lower()}"
                 else:
                     cliente_input, _, _ = extraer_datos(frase)
-                    
-                matches = [
-                    (i + 2, row["CLIENTE"], row["ASESOR/A"])
-                    for i, row in df_clientes.iterrows()
-                    if normalizar(row["CLIENTE"]) == normalizar(cliente_input)
-                ]
+
+                matches = buscar_coincidencia(cliente_input)
+
                 if len(matches) == 1:
                     _, creal, asesor = matches[0]
                     hoja = procesar_contacto(creal, _, frase, estado, proximo, nota, extraer_datos, detectar_tipo)
