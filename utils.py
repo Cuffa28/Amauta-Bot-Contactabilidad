@@ -4,8 +4,17 @@ from drive_utils import normalizar
 
 def detectar_tipo(frase):
     frase = frase.lower()
+
+    # 🛠️ Nuevos patrones explícitos
+    if "se realizo una llamada" in frase or "se realizó una llamada" in frase:
+        return "LLAMADA"
+    if "se realizo un mensaje" in frase or "se realizó un mensaje" in frase:
+        return "MENSAJES"
+    if "se realizo una reunion" in frase or "se realizó una reunión" in frase:
+        return "REUNION"
+
     if any(p in frase for p in [
-        "llamé a", "llame a", "me comuniqué con", "se llamó a", 
+        "llamé a", "llame a", "me comuniqué con", "se llamó a",
         "hable con", "hable a", "se hablo con"
     ]):
         return "LLAMADA"
@@ -14,7 +23,7 @@ def detectar_tipo(frase):
     ]):
         return "MENSAJES"
     elif any(p in frase for p in [
-        "me reuni con", "me junte con", "estuve con", 
+        "me reuni con", "me junte con", "estuve con",
         "tuve un zoom con", "visite a", "tuve un meet con"
     ]):
         return "REUNION"
