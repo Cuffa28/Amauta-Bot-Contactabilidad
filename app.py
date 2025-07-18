@@ -34,16 +34,44 @@ if not st.session_state.autenticado:
             st.error("❌ No estás autorizado para ingresar a esta aplicación.")
     st.stop()
 
+# 🔁 Mostrar recordatorios en cualquier pestaña
+recordatorios = obtener_recordatorios_pendientes(st.session_state.mail_ingresado)
+
+def mostrar_recordatorios():
+    if recordatorios:
+        st.subheader("📣 Contactos a seguir")
+        for i, (cliente, asesor, fecha, detalle, tipo) in enumerate(recordatorios):
+            icono = "🔴" if tipo == "vencido" else "🟡"
+            fila = st.container()
+            with fila:
+                col1, col2 = st.columns([5, 1])
+                with col1:
+                    st.markdown(f"{icono} **{cliente}** – contacto para **{fecha}**. Motivo: {detalle or '-'} (Asesor: {asesor})")
+                with col2:
+                    if st.button("✔️ Hecho", key=f"hecho_{i}"):
+                        try:
+                            marcar_contacto_como_hecho(cliente, asesor)
+                            fila.empty()
+                            st.success(f"✅ {cliente} marcado como hecho")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"⚠️ Error al marcar como hecho: {e}")
+    else:
+        st.success("🎉 No hay contactos pendientes. ¡Buen trabajo!")
+
 tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 
 with tabs[0]:
     st.title("📋 Registro de Contactos Comerciales")
+    mostrar_recordatorios()
 
     modo_carga = st.radio(
         "🔀 ¿Cómo querés cargar el contacto?",
         ["Carga guiada", "Redacción libre", "Carga rápida", "Carga múltiple"],
         horizontal=True
     )
+
+    tipo = "CONTACTO"  # valor por defecto
 
     if modo_carga == "Carga guiada":
         df_clientes = obtener_hoja_clientes()
@@ -55,6 +83,7 @@ with tabs[0]:
         motivo_contacto = st.text_input("📝 Motivo del contacto:", placeholder="Ej: revisión de cartera")
 
         frase = f"Se realizó una {tipo_contacto.lower()} con {cliente_seleccionado} el {fecha_contacto.strftime('%d/%m/%Y')} por {motivo_contacto.lower()}"
+        tipo = tipo_contacto
 
     elif modo_carga == "Redacción libre":
         frase = st.text_input("📝 Escribí el contacto realizado:", placeholder="Ej: Hablé con Lavaque el 10/7/2025 por revisión de cartera")
@@ -83,9 +112,9 @@ with tabs[0]:
                 ]
 
                 if len(coincidencias) == 1:
-                    fila_cliente, cliente_nombre_real, asesor = coincidencias[0]
-                    hoja = procesar_contacto(cliente_nombre_real, fila_cliente, frase_flash, "Hecho", "", nota_flash, extraer_datos, detectar_tipo)
-                    guardar_en_historial(cliente_nombre_real, hoja, frase_flash, "Hecho", nota_flash, "")
+                    fila, cliente_nombre_real, asesor = coincidencias[0]
+                    hoja = procesar_contacto(cliente_nombre_real, fila, frase_flash, "Hecho", "", nota_flash, extraer_datos, detectar_tipo, tipo_contacto)
+                    guardar_en_historial(cliente_nombre_real, hoja, frase_flash, "Hecho", nota_flash, "", tipo_contacto)
                     st.success(f"✅ Contacto registrado con {cliente_nombre_real} en la hoja: **{hoja}**.")
                     st.rerun()
                 else:
@@ -134,7 +163,7 @@ with tabs[0]:
                     st.text(f"- {f}")
             st.rerun()
 
-    if 'frase' in locals():
+    if 'frase' in locals() and frase:
         try:
             cliente_preview, fecha_preview, motivo_preview = extraer_datos(frase)
             st.markdown(f"📌 Se detectó: **{cliente_preview}**, fecha: **{fecha_preview}**, motivo: _{motivo_preview}_")
@@ -162,8 +191,8 @@ with tabs[0]:
 
             if len(coincidencias) == 1:
                 fila, cliente_real, asesor = coincidencias[0]
-                hoja = procesar_contacto(cliente_real, fila, frase, estado, proximo_contacto, nota, extraer_datos, detectar_tipo)
-                guardar_en_historial(cliente_real, hoja, frase, estado, nota, proximo_contacto)
+                hoja = procesar_contacto(cliente_real, fila, frase, estado, proximo_contacto, nota, extraer_datos, detectar_tipo, tipo)
+                guardar_en_historial(cliente_real, hoja, frase, estado, nota, proximo_contacto, tipo)
                 st.success("✅ Contacto registrado correctamente.")
             else:
                 st.error("❌ Cliente no encontrado o hay varias coincidencias.")
@@ -190,24 +219,4 @@ with tabs[0]:
 
 with tabs[1]:
     st.title("📅 Recordatorios Pendientes")
-    recordatorios = obtener_recordatorios_pendientes(st.session_state.mail_ingresado)
-    if recordatorios:
-        st.subheader("📣 Contactos a seguir")
-        for i, (cliente, asesor, fecha, detalle, tipo) in enumerate(recordatorios):
-            icono = "🔴" if tipo == "vencido" else "🟡"
-            fila = st.container()
-            with fila:
-                col1, col2 = st.columns([5, 1])
-                with col1:
-                    st.markdown(f"{icono} **{cliente}** – contacto para **{fecha}**. Motivo: {detalle or '-'} (Asesor: {asesor})")
-                with col2:
-                    if st.button("✔️ Hecho", key=f"hecho_{i}"):
-                        try:
-                            marcar_contacto_como_hecho(cliente, asesor)
-                            fila.empty()
-                            st.success(f"✅ {cliente} marcado como hecho")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"⚠️ Error al marcar como hecho: {e}")
-    else:
-        st.success("🎉 No hay contactos pendientes. ¡Buen trabajo!")
+    mostrar_recordatorios()
