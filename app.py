@@ -44,36 +44,32 @@ recordatorios = obtener_recordatorios_pendientes(st.session_state.mail_ingresado
 vencen_hoy = [r for r in recordatorios if r[4] == "pendiente"]
 
 if vencen_hoy and not st.session_state.popup_oculto:
-    clientes_html = "".join([
-        f"<li><b>{c}</b> – {f} – {n if n else '-'} </li>"
-        for c, _, f, n, _ in vencen_hoy
-    ])
-    contenido_popup = f"""
-    <div id=\"popup-alerta\" style=\"
-        position: fixed;
-        top: 15px;
-        left: 20px;
-        background-color: #fff3cd;
-        color: #856404;
-        border: 1px solid #ffeeba;
-        border-radius: 8px;
-        padding: 15px 20px;
-        box-shadow: 0 0 15px rgba(0,0,0,0.2);
-        z-index: 10000;
-        max-width: 350px;
-        font-family: sans-serif;
-    \">
-        <b>📣 ¡Tenés contactos que vencen hoy!</b>
-        <ul style=\"margin-top: 10px; padding-left: 20px; font-size: 0.9rem;\">
-            {clientes_html}
-        </ul>
-        <button onclick=\"document.getElementById('popup-alerta').style.display='none'\"
-            style=\"margin-top:10px; padding:5px 10px; border:none; border-radius:5px; background-color:#f5c6cb; color:#721c24; cursor:pointer;\">
-            ❌ Cerrar
-        </button>
-    </div>
-    """
-    html(contenido_popup, height=190)
+    with st.container():
+        st.markdown(
+            f\"\"\"
+            <div style='
+                position: relative;
+                margin-bottom: 10px;
+                background-color: #fff3cd;
+                color: #856404;
+                border: 1px solid #ffeeba;
+                border-radius: 8px;
+                padding: 15px 20px;
+                box-shadow: 0 0 15px rgba(0,0,0,0.2);
+                max-width: 500px;
+                font-family: sans-serif;
+            '>
+                <b>📣 ¡Tenés contactos que vencen hoy!</b>
+                <ul style='margin-top: 10px; padding-left: 20px; font-size: 0.9rem;'>
+                    {"".join([f"<li><b>{c}</b> – {f} – {n if n else '-'} </li>" for c, _, f, n, _ in vencen_hoy])}
+                </ul>
+            </div>
+            \"\"\",
+            unsafe_allow_html=True
+        )
+        if st.button("❌ Cerrar recordatorios", key="cerrar_popup"):
+            st.session_state.popup_oculto = True
+            st.rerun()
 
 tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 
