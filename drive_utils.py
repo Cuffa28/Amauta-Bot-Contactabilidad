@@ -69,13 +69,15 @@ def procesar_contacto(cliente_real, fila_dummy, frase, estado, proximo_contacto,
     fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
     tipo_contacto = detectar_tipo_fn(frase)
 
-    hoja.update_cell(fila_cliente, 1, cliente_real)
-    hoja.update_cell(fila_cliente, 2, tipo_contacto)
-    hoja.update_cell(fila_cliente, 3, motivo)
-    hoja.update_cell(fila_cliente, 4, fecha_actual)
-    hoja.update_cell(fila_cliente, 5, estado)
-    hoja.update_cell(fila_cliente, 6, nota)
-    hoja.update_cell(fila_cliente, 7, proximo_contacto)
+    hoja.update(f"A{fila_cliente}:G{fila_cliente}", [[
+        cliente_real,
+        tipo_contacto,
+        motivo,
+        fecha_actual,
+        estado,
+        nota,
+        proximo_contacto
+    ]])
 
     return hoja_nombre
 
