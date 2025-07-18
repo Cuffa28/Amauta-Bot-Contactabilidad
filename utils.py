@@ -5,7 +5,7 @@ from drive_utils import normalizar
 def detectar_tipo(frase):
     frase = frase.lower()
 
-    # 🛠️ Nuevos patrones explícitos
+    # 🛠️ Nuevos patrones explícitos (para modo guiado)
     if "se realizo una llamada" in frase or "se realizó una llamada" in frase:
         return "LLAMADA"
     if "se realizo un mensaje" in frase or "se realizó un mensaje" in frase:
@@ -36,6 +36,7 @@ def extraer_datos(frase):
     patrones = [
         r"SE CONTACTO CON (.*?) EL (\d{1,2}/\d{1,2}/\d{4}) POR (.*)",
         r"(?:HABLE CON|LLAME A|ME COMUNIQUE CON|CHATEE CON|LE ESCRIBI A|ME REUNI CON|VISITE A|ESTUVE CON|TUVE UN ZOOM CON|TUVE UN MEET CON) (.*?) EL (\d{1,2}/\d{1,2}/\d{4}) POR (.*)",
+        r"SE REALIZO UNA .*? CON (.*?) EL (\d{1,2}/\d{1,2}/\d{4}) POR (.*)",  # 🆕 para carga guiada
     ]
 
     for patron in patrones:
@@ -46,4 +47,5 @@ def extraer_datos(frase):
             return normalizar(cliente), fecha_contacto, motivo.strip()
 
     raise ValueError("No se pudo interpretar la frase. Usá el formato sugerido.")
+
 
