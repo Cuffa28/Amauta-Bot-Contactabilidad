@@ -80,7 +80,6 @@ with tabs[0]:
         except Exception as e:
             st.warning(f"⚠️ Error mostrando frase: {e}")
 
-    # --- Modo: Redacción libre ---
     elif modo_carga == "Redacción libre":
         frase = st.text_input(
             "📝 Escribí el contacto:",
@@ -114,7 +113,6 @@ with tabs[0]:
             except Exception as e:
                 st.error(f"⚠️ {e}")
 
-    # --- Modo: Carga múltiple ---
     elif modo_carga == "Carga múltiple":
         st.markdown("---")
         st.subheader("📥 Carga múltiple")
@@ -147,7 +145,6 @@ with tabs[0]:
                     st.text(f"- {f}")
             st.rerun()
 
-    # --- Actualización para guiada/redacción libre general ---
     if modo_carga in ["Carga guiada", "Redacción libre"]:
         estado = st.selectbox("📌 Estado:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"], key="up_estado")
         agendar = st.radio("📅 Próximo contacto?", ["No", "Sí"], key="up_agenda")
@@ -158,17 +155,8 @@ with tabs[0]:
 
         if st.button("Actualizar contacto", key="up_btn"):
             try:
-                if modo_carga == "Carga guiada":
-                    cliente_input = cliente_seleccionado
-
-                    if not cliente_input or not motivo_contacto:
-                        st.warning("⚠️ Completá todos los campos requeridos.")
-                        st.stop()
-
-                    frase = f"Se realizó una {tipo_contacto.lower()} con {cliente_input} el {fecha_contacto.strftime('%d/%m/%Y')} por {motivo_contacto.strip().lower()}"
-                else:
-                    cliente_input, _, _ = extraer_datos(frase)
-
+                # Obtener cliente desde frase, siempre
+                cliente_input, _, _ = extraer_datos(frase)
                 matches = buscar_coincidencia(cliente_input)
 
                 if len(matches) == 1:
@@ -181,7 +169,6 @@ with tabs[0]:
             except Exception as e:
                 st.error(f"⚠️ {e}")
 
-    # --- Historial y descarga ---
     st.subheader("📂 Historial reciente")
     if "historial" in st.session_state and st.session_state.historial:
         dfh = pd.DataFrame(st.session_state.historial)
