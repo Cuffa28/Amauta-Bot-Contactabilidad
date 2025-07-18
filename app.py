@@ -37,43 +37,43 @@ if not st.session_state.autenticado:
     st.stop()
 
  # 🧨 POP-UP EMERGENTE DE VENCIMIENTOS HOY (ESQUINA SUPERIOR IZQUIERDA)
-    if "popup_oculto" not in st.session_state:
-        st.session_state.popup_oculto = False
+if "popup_oculto" not in st.session_state:
+    st.session_state.popup_oculto = False
 
-    recordatorios = obtener_recordatorios_pendientes(st.session_state.mail_ingresado)
-    vencen_hoy = [r for r in recordatorios if r[4] == "pendiente"]
+recordatorios = obtener_recordatorios_pendientes(st.session_state.mail_ingresado)
+vencen_hoy = [r for r in recordatorios if r[4] == "pendiente"]
 
-    if vencen_hoy and not st.session_state.popup_oculto:
-        clientes_html = "".join([
-            f"<li><b>{c}</b> – {f} – {n if n else '-'} </li>"
-            for c, _, f, n, _ in vencen_hoy
-        ])
-        contenido_popup = f"""
-        <div id=\"popup-alerta\" style=\"
-            position: fixed;
-            top: 0px;
-            left: 20px;
-            background-color: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeeba;
-            border-radius: 8px;
-            padding: 15px 20px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
-            z-index: 10000;
-            max-width: 350px;
-            font-family: sans-serif;
-        \">
-            <b>📣 ¡Tenés contactos que vencen hoy!</b>
-            <ul style=\"margin-top: 10px; padding-left: 20px; font-size: 0.9rem;\">
-                {clientes_html}
-            </ul>
-            <button onclick=\"document.getElementById('popup-alerta').style.display='none'\"
-                style=\"margin-top:10px; padding:5px 10px; border:none; border-radius:5px; background-color:#f5c6cb; color:#721c24; cursor:pointer;\">
-                ❌ Cerrar
-            </button>
-        </div>
-        """
-        html(contenido_popup, height=300)
+if vencen_hoy and not st.session_state.popup_oculto:
+    clientes_html = "".join([
+        f"<li><b>{c}</b> – {f} – {n if n else '-'} </li>"
+        for c, _, f, n, _ in vencen_hoy
+    ])
+    contenido_popup = f"""
+    <div id=\"popup-alerta\" style=\"
+        position: fixed;
+        top: 0px;
+        left: 20px;
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+        border-radius: 8px;
+        padding: 15px 20px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        z-index: 10000;
+        max-width: 350px;
+        font-family: sans-serif;
+    \">
+        <b>📣 ¡Tenés contactos que vencen hoy!</b>
+        <ul style=\"margin-top: 10px; padding-left: 20px; font-size: 0.9rem;\">
+            {clientes_html}
+        </ul>
+        <button onclick=\"document.getElementById('popup-alerta').style.display='none'\"
+            style=\"margin-top:10px; padding:5px 10px; border:none; border-radius:5px; background-color:#f5c6cb; color:#721c24; cursor:pointer;\">
+            ❌ Cerrar
+        </button>
+    </div>
+    """
+    html(contenido_popup, height=300)
 
 tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 
