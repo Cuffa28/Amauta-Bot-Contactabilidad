@@ -37,24 +37,24 @@ def obtener_hoja_clientes():
 def obtener_hoja_nombre(codigo_asesor):
     return mapa_asesores.get(codigo_asesor, "DESCONOCIDO")
 
-def procesar_contacto(cliente_real, fila_cliente, frase, estado, proximo_contacto, nota, extraer_datos_fn, detectar_tipo_fn):
-    df_clientes = obtener_hoja_clientes()
-    codigo_asesor = df_clientes.iloc[fila_cliente - 2]["ASESOR/A"]
-    hoja_nombre = obtener_hoja_nombre(codigo_asesor)
-    hoja_contacto = spreadsheet.worksheet(hoja_nombre)
-
-    cliente_col = df_clientes.columns.get_loc("CLIENTE") + 1
-    fila_real = fila_cliente
-
+def procesar_contacto(cliente_real, fila, frase, estado, proximo_contacto, nota, extraer_datos_fn, detectar_tipo_fn):
+    hoja_nombre = mapa_asesores.get(extraer_datos_fn(frase), "DESCONOCIDO")
+    hoja = spreadsheet.worksheet(hoja_nombre)
     fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
     tipo_contacto = detectar_tipo_fn(frase)
 
-    hoja_contacto.update_cell(fila_real, cliente_col + 1, fecha_actual)
-    hoja_contacto.update_cell(fila_real, cliente_col + 2, tipo_contacto)
-    hoja_contacto.update_cell(fila_real, cliente_col + 3, frase)
-    hoja_contacto.update_cell(fila_real, cliente_col + 4, estado)
-    hoja_contacto.update_cell(fila_real, cliente_col + 5, nota)
-    hoja_contacto.update_cell(fila_real, cliente_col + 6, proximo_contacto)
+    # Columnas:
+    # C: Detalles (col 3)
+    # D: Fecha último contacto (col 4)
+    # E: Estado (col 5)
+    # F: Notas (col 6)
+    # G: Próximo contacto (col 7)
+
+    hoja.update_cell(fila, 3, frase)              # Detalles
+    hoja.update_cell(fila, 4, fecha_actual)       # Fecha último contacto
+    hoja.update_cell(fila, 5, estado)             # Estado
+    hoja.update_cell(fila, 6, nota)               # Notas
+    hoja.update_cell(fila, 7, proximo_contacto)   # Próximo contacto
 
     return hoja_nombre
 
