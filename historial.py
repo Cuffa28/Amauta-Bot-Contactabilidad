@@ -13,37 +13,48 @@ def guardar_en_historial(cliente_real, hoja_registro, frase, estado, nota, proxi
     except Exception:
         detalle_actual = frase
 
+    fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
     nuevo_registro = {
         "Cliente": cliente_real,
         "Detalle": detalle_actual,
-        "Fecha": datetime.datetime.now().strftime("%d/%m/%Y"),
+        "Fecha": fecha_hoy,
         "Estado": estado,
         "Nota": nota,
         "Próximo contacto": proximo_contacto,
         "Asesor": hoja_registro
     }
 
+    # Verificar duplicado en sesión
     if "historial" not in st.session_state:
         st.session_state.historial = []
 
-    if (
-        st.session_state.historial and
-        st.session_state.historial[0]["Cliente"] == cliente_real and
-        st.session_state.historial[0]["Detalle"] == detalle_actual
-    ):
-        st.session_state.historial.pop(0)
+    for reg in st.session_state.historial:
+        if (
+            reg["Cliente"] == cliente_real and
+            reg["Detalle"] == detalle_actual and
+            reg["Fecha"] == fecha_hoy
+        ):
+            return  # ⚠️ No guardar duplicado
 
     st.session_state.historial.insert(0, nuevo_registro)
     st.session_state.historial = st.session_state.historial[:90]
 
-    df_historial = pd.DataFrame([nuevo_registro])
+    # Verificar duplicado en CSV
     if os.path.exists(ARCHIVO_HISTORIAL):
-        df_historial.to_csv(ARCHIVO_HISTORIAL, mode='a', header=False, index=False)
+        df_hist = pd.read_csv(ARCHIVO_HISTORIAL)
+        duplicado = df_hist[
+            (df_hist["Cliente"] == cliente_real) &
+            (df_hist["Detalle"] == detalle_actual) &
+            (df_hist["Fecha"] == fecha_hoy)
+        ]
+        if duplicado.empty:
+            pd.DataFrame([nuevo_registro]).to_csv(ARCHIVO_HISTORIAL, mode='a', header=False, index=False)
     else:
-        df_historial.to_csv(ARCHIVO_HISTORIAL, index=False)
+        pd.DataFrame([nuevo_registro]).to_csv(ARCHIVO_HISTORIAL, index=False)
 
 def cargar_historial_completo():
     if os.path.exists(ARCHIVO_HISTORIAL):
         return pd.read_csv(ARCHIVO_HISTORIAL)
     else:
         return pd.DataFrame(columns=["Cliente", "Detalle", "Fecha", "Estado", "Nota", "Próximo contacto", "Asesor"])
+
