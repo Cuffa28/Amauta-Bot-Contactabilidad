@@ -134,11 +134,12 @@ with tabs[0]:
                     st.text(f"- {f}")
             st.rerun()
 
-    try:
-        cliente_preview, fecha_preview, motivo_preview = extraer_datos(frase)
-        st.markdown(f"📌 Se detectó: **{cliente_preview}**, fecha: **{fecha_preview}**, motivo: _{motivo_preview}_")
-    except Exception as e:
-        st.error(f"⚠️ No se pudo interpretar correctamente: {e}")
+    if 'frase' in locals():
+        try:
+            cliente_preview, fecha_preview, motivo_preview = extraer_datos(frase)
+            st.markdown(f"📌 Se detectó: **{cliente_preview}**, fecha: **{fecha_preview}**, motivo: _{motivo_preview}_")
+        except Exception as e:
+            st.error(f"⚠️ No se pudo interpretar correctamente: {e}")
 
     estado = st.selectbox("📌 Estado del contacto:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"])
     agendar = st.radio("📅 ¿Querés agendar un próximo contacto?", ["No", "Sí"])
