@@ -83,7 +83,7 @@ with tabs[0]:
 
     modo_carga = st.radio(
         "🔀 ¿Cómo querés cargar el contacto?",
-        ["Carga guiada", "Redacción libre", "Carga rápida", "Carga múltiple"],
+        ["Carga guiada", "Carga rápida", "Carga múltiple"],
         horizontal=True
     )
 
@@ -128,13 +128,6 @@ with tabs[0]:
             st.markdown(f"📌 Detectado: **{cliente_seleccionado}**, **{fecha_contacto.strftime('%d/%m/%Y')}**, _{motivo_contacto}_")
         except Exception as e:
             st.warning(f"⚠️ Error mostrando frase: {e}")
-
-    elif modo_carga == "Redacción libre":
-        frase = st.text_input(
-            "📝 Escribí el contacto:",
-            placeholder="Ej: Se contactó con Pepito el 17/07/2025 por revisión de cartera",
-            key="rl_frase"
-        )
 
     # --- Modo: Carga rápida ---
     elif modo_carga == "Carga rápida":
@@ -194,7 +187,7 @@ with tabs[0]:
                     st.text(f"- {f}")
             st.rerun()
 
-    if modo_carga in ["Carga guiada", "Redacción libre"]:
+    if modo_carga == "Carga guiada":
         estado = st.selectbox("📌 Estado:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"], key="up_estado")
         agendar = st.radio("📅 Próximo contacto?", ["No", "Sí"], key="up_agenda")
         proximo = ""
