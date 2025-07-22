@@ -109,9 +109,10 @@ if vencen_hoy and not st.session_state.popup_oculto:
         st.rerun()
 
 # 🧠 Permitir a todos los usuarios escribir libremente el cliente
+df_clientes = obtener_hoja_clientes()
+nombres = sorted(df_clientes["CLIENTE"].dropna().unique())
 cliente_seleccionado = st.text_input("👤 Cliente (podés escribir libremente):", "", key="cliente_libre")
 
-# Normalizar lista de clientes existentes
 clientes_normalizados = [normalizar(c) for c in nombres]
 usuario_codigo = st.session_state.mail_ingresado.split("@")[0][:2].upper()
 
