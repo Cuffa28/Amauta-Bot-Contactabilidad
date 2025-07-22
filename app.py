@@ -55,12 +55,14 @@ if tipo_dato == "Locales":
     marcar_contacto_como_hecho = drive_local.marcar_contacto_como_hecho
     obtener_recordatorios_pendientes = drive_local.obtener_recordatorios_pendientes
     normalizar = drive_local.normalizar
+    agregar_cliente_si_no_existe = drive_local.agregar_cliente_si_no_existe if hasattr(drive_local, 'agregar_cliente_si_no_existe') else lambda cliente, asesor: None
 else:
     obtener_hoja_clientes = drive_int.obtener_hoja_clientes
     procesar_contacto = drive_int.procesar_contacto
     marcar_contacto_como_hecho = drive_int.marcar_contacto_como_hecho
     obtener_recordatorios_pendientes = drive_int.obtener_recordatorios_pendientes
     normalizar = drive_int.normalizar
+    agregar_cliente_si_no_existe = drive_int.agregar_cliente_si_no_existe if hasattr(drive_int, 'agregar_cliente_si_no_existe') else lambda cliente, asesor: None
 
 # 🧨 POP-UP EMERGENTE DE VENCIMIENTOS HOY
 if "popup_oculto" not in st.session_state:
@@ -91,6 +93,17 @@ if vencen_hoy and not st.session_state.popup_oculto:
     if st.button("❌ Cerrar recordatorios", key="cerrar_popup"):
         st.session_state.popup_oculto = True
         st.rerun()
+
+# 💡 Para REGINA permitir escribir cualquier nombre de cliente (prospect)
+df_clientes = obtener_hoja_clientes()
+nombres = sorted(df_clientes["CLIENTE"].dropna().unique())
+
+if st.session_state.mail_ingresado == "regina@amautainversiones.com":
+    cliente_seleccionado = st.text_input("👤 Cliente (podés escribir libremente):", "", key="cliente_libre")
+    if cliente_seleccionado and normalizar(cliente_seleccionado) not in [normalizar(c) for c in nombres]:
+        agregar_cliente_si_no_existe(cliente_seleccionado, "REGINA")
+else:
+    cliente_seleccionado = st.selectbox("👤 Cliente:", nombres, key="cliente_normal")
 
 tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 
