@@ -165,3 +165,14 @@ def obtener_recordatorios_pendientes(mail_usuario):
             except ValueError:
                 continue
     return pendientes
+
+def agregar_cliente_si_no_existe(nombre_cliente, asesor):
+    inicializar_client()
+    hoja = spreadsheet.worksheet("CLIENTES")
+    df = pd.DataFrame(hoja.get_all_records())
+
+    if any(normalizar(nombre_cliente) == normalizar(row["CLIENTE"]) for _, row in df.iterrows()):
+        return  # Ya existe
+
+    hoja.append_row([nombre_cliente, asesor])
+
