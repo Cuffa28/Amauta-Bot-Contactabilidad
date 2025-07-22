@@ -100,12 +100,17 @@ def obtener_recordatorios_pendientes(mail_usuario):
     inicializar_client()
     codigo = mail_usuario.split("@")[0][:2].upper()
     hoja_nombre = mapa_asesores.get(codigo)
+
     if not hoja_nombre:
-        return []
+        raise ValueError(f"No se encontró hoja asignada para el código de asesor '{codigo}'.")
 
-    hoja = spreadsheet.worksheet(hoja_nombre)
+    try:
+        hoja = spreadsheet.worksheet(hoja_nombre)
+    except gspread.exceptions.WorksheetNotFound:
+        raise ValueError(f"La hoja '{hoja_nombre}' no existe en la planilla.")
+
     df = pd.DataFrame(hoja.get_all_records())
-
+    
     pendientes = []
     hoy = datetime.datetime.now().date()
 
