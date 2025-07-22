@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from streamlit.components.v1 import html
+import gspread
 
 # 🔁 Importar ambos módulos: local e internacional
 import drive_utils as drive_local
@@ -53,14 +54,22 @@ if tipo_dato == "Locales":
     obtener_hoja_clientes = drive_local.obtener_hoja_clientes
     procesar_contacto = drive_local.procesar_contacto
     marcar_contacto_como_hecho = drive_local.marcar_contacto_como_hecho
-    obtener_recordatorios_pendientes = drive_local.obtener_recordatorios_pendientes
+    try:
+        obtener_recordatorios_pendientes = drive_local.obtener_recordatorios_pendientes
+    except gspread.exceptions.WorksheetNotFound:
+        st.error("❌ No se encontró la hoja del asesor en la planilla local.")
+        st.stop()
     normalizar = drive_local.normalizar
     agregar_cliente_si_no_existe = drive_local.agregar_cliente_si_no_existe if hasattr(drive_local, 'agregar_cliente_si_no_existe') else lambda cliente, asesor: None
 else:
     obtener_hoja_clientes = drive_int.obtener_hoja_clientes
     procesar_contacto = drive_int.procesar_contacto
     marcar_contacto_como_hecho = drive_int.marcar_contacto_como_hecho
-    obtener_recordatorios_pendientes = drive_int.obtener_recordatorios_pendientes
+    try:
+        obtener_recordatorios_pendientes = drive_int.obtener_recordatorios_pendientes
+    except gspread.exceptions.WorksheetNotFound:
+        st.error("❌ No se encontró la hoja del asesor en la planilla internacional.")
+        st.stop()
     normalizar = drive_int.normalizar
     agregar_cliente_si_no_existe = drive_int.agregar_cliente_si_no_existe if hasattr(drive_int, 'agregar_cliente_si_no_existe') else lambda cliente, asesor: None
 
@@ -68,7 +77,12 @@ else:
 if "popup_oculto" not in st.session_state:
     st.session_state.popup_oculto = False
 
-recordatorios = obtener_recordatorios_pendientes(st.session_state.mail_ingresado)
+try:
+    recordatorios = obtener_recordatorios_pendientes(st.session_state.mail_ingresado)
+except ValueError as e:
+    st.error(f"⚠️ {e}")
+    recordatorios = []
+
 vencen_hoy = [r for r in recordatorios if r[4] == "pendiente"]
 
 if vencen_hoy and not st.session_state.popup_oculto:
