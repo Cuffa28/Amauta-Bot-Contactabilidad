@@ -115,7 +115,7 @@ nombres = sorted(df_clientes["CLIENTE"].dropna().unique())
 if st.session_state.mail_ingresado == "regina@amautainversiones.com":
     cliente_seleccionado = st.text_input("👤 Cliente (podés escribir libremente):", "", key="cliente_libre")
     if cliente_seleccionado and normalizar(cliente_seleccionado) not in [normalizar(c) for c in nombres]:
-        agregar_cliente_si_no_existe(cliente_seleccionado, "REGINA")
+        agregar_cliente_si_no_existe(cliente_seleccionado, "RE")
 else:
     cliente_seleccionado = st.selectbox("👤 Cliente:", nombres, key="cliente_normal")
 
