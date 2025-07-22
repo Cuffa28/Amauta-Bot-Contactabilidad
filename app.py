@@ -23,8 +23,8 @@ if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
 
 if not st.session_state.autenticado:
-    st.title("\U0001F512 Acceso restringido")
-    mail_ingresado = st.text_input("\U0001F4E7 Ingresá tu mail institucional", placeholder="tuusuario@amautainversiones.com")
+    st.title("🔐 Acceso restringido")
+    mail_ingresado = st.text_input("📧 Ingresá tu mail institucional", placeholder="tuusuario@amautainversiones.com")
     if st.button("Ingresar"):
         correo = mail_ingresado.strip().lower()
         if correo in usuarios_autorizados:
@@ -35,9 +35,16 @@ if not st.session_state.autenticado:
             st.error("❌ No estás autorizado.")
     st.stop()
 
-# 🌍 Selección entre clientes locales o internacionales para REGINA
+# 🌍 Selección entre clientes locales o internacionales para REGINA (antes de mostrar el resto)
 if st.session_state.mail_ingresado == "regina@amautainversiones.com":
     tipo_dato = st.radio("🌐 ¿Con qué clientes querés trabajar?", ["Locales", "Internacionales"], key="origen_datos")
+    st.markdown("---")
+    if "tipo_dato_confirmado" not in st.session_state:
+        st.session_state.tipo_dato_confirmado = False
+    if st.button("Continuar"):
+        st.session_state.tipo_dato_confirmado = True
+    if not st.session_state.tipo_dato_confirmado:
+        st.stop()
 else:
     tipo_dato = "Locales" if st.session_state.mail_ingresado != "julieta@amautainversiones.com" else "Internacionales"
 
@@ -55,7 +62,7 @@ else:
     obtener_recordatorios_pendientes = drive_int.obtener_recordatorios_pendientes
     normalizar = drive_int.normalizar
 
-# 🎮 POP-UP EMERGENTE DE VENCIMIENTOS HOY
+# 🧨 POP-UP EMERGENTE DE VENCIMIENTOS HOY
 if "popup_oculto" not in st.session_state:
     st.session_state.popup_oculto = False
 
