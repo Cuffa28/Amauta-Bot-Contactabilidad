@@ -2,13 +2,11 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from streamlit.components.v1 import html
-from drive_utils import (
-    obtener_hoja_clientes,
-    procesar_contacto,
-    marcar_contacto_como_hecho,
-    obtener_recordatorios_pendientes,
-    normalizar
-)
+
+# 🔁 Importar ambos módulos: local e internacional
+import drive_utils as drive_local
+import drive_utils_internacional as drive_int
+
 from historial import guardar_en_historial, cargar_historial_completo, formatear_historial_exportable
 from utils import extraer_datos, detectar_tipo
 
@@ -17,15 +15,16 @@ usuarios_autorizados = [
     "florencia@amautainversiones.com",
     "jeronimo@amautainversiones.com",
     "agustin@amautainversiones.com",
-    "regina@amautainversiones.com"
+    "regina@amautainversiones.com",
+    "julieta@amautainversiones.com"
 ]
 
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
 
 if not st.session_state.autenticado:
-    st.title("🔐 Acceso restringido")
-    mail_ingresado = st.text_input("📧 Ingresá tu mail institucional", placeholder="tuusuario@amautainversiones.com")
+    st.title("\U0001F512 Acceso restringido")
+    mail_ingresado = st.text_input("\U0001F4E7 Ingresá tu mail institucional", placeholder="tuusuario@amautainversiones.com")
     if st.button("Ingresar"):
         correo = mail_ingresado.strip().lower()
         if correo in usuarios_autorizados:
@@ -36,7 +35,27 @@ if not st.session_state.autenticado:
             st.error("❌ No estás autorizado.")
     st.stop()
 
- # 🧨 POP-UP EMERGENTE DE VENCIMIENTOS HOY (ESQUINA SUPERIOR IZQUIERDA)
+# 🌍 Selección entre clientes locales o internacionales para REGINA
+if st.session_state.mail_ingresado == "regina@amautainversiones.com":
+    tipo_dato = st.radio("🌐 ¿Con qué clientes querés trabajar?", ["Locales", "Internacionales"], key="origen_datos")
+else:
+    tipo_dato = "Locales" if st.session_state.mail_ingresado != "julieta@amautainversiones.com" else "Internacionales"
+
+# Selección de funciones según el tipo de dato
+if tipo_dato == "Locales":
+    obtener_hoja_clientes = drive_local.obtener_hoja_clientes
+    procesar_contacto = drive_local.procesar_contacto
+    marcar_contacto_como_hecho = drive_local.marcar_contacto_como_hecho
+    obtener_recordatorios_pendientes = drive_local.obtener_recordatorios_pendientes
+    normalizar = drive_local.normalizar
+else:
+    obtener_hoja_clientes = drive_int.obtener_hoja_clientes
+    procesar_contacto = drive_int.procesar_contacto
+    marcar_contacto_como_hecho = drive_int.marcar_contacto_como_hecho
+    obtener_recordatorios_pendientes = drive_int.obtener_recordatorios_pendientes
+    normalizar = drive_int.normalizar
+
+# 🎮 POP-UP EMERGENTE DE VENCIMIENTOS HOY
 if "popup_oculto" not in st.session_state:
     st.session_state.popup_oculto = False
 
@@ -49,32 +68,22 @@ if vencen_hoy and not st.session_state.popup_oculto:
         for c, _, f, n, _ in vencen_hoy
     ])
 
-    with st.container():
-        st.markdown(
-            f"""
-            <div style='
-                position: relative;
-                margin-bottom: 10px;
-                background-color: #fff3cd;
-                color: #856404;
-                border: 1px solid #ffeeba;
-                border-radius: 8px;
-                padding: 15px 20px;
-                box-shadow: 0 0 15px rgba(0,0,0,0.2);
-                max-width: 500px;
-                font-family: sans-serif;
-            '>
-                <b>📣 ¡Tenés contactos que vencen hoy!</b>
-                <ul style='margin-top: 10px; padding-left: 20px; font-size: 0.9rem;'>
-                    {clientes_html}
-                </ul>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-        if st.button("❌ Cerrar recordatorios", key="cerrar_popup"):
-            st.session_state.popup_oculto = True
-            st.rerun()
+    st.markdown(
+        f"""
+        <div style='position: relative; margin-bottom: 10px; background-color: #fff3cd; color: #856404;
+        border: 1px solid #ffeeba; border-radius: 8px; padding: 15px 20px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2); max-width: 500px;'>
+            <b>📣 ¡Tenés contactos que vencen hoy!</b>
+            <ul style='margin-top: 10px; padding-left: 20px; font-size: 0.9rem;'>
+                {clientes_html}
+            </ul>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    if st.button("❌ Cerrar recordatorios", key="cerrar_popup"):
+        st.session_state.popup_oculto = True
+        st.rerun()
 
 tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 
