@@ -102,19 +102,24 @@ def obtener_recordatorios_pendientes(mail_usuario):
     hoja_nombre = mapa_asesores.get(codigo)
 
     if not hoja_nombre:
-        raise ValueError(f"No se encontró hoja asignada para el código de asesor '{codigo}'.")
+        raise ValueError(f"No se encontró hoja asignada para el código '{codigo}'.")
 
     try:
         hoja = spreadsheet.worksheet(hoja_nombre)
     except gspread.exceptions.WorksheetNotFound:
-        raise ValueError(f"La hoja '{hoja_nombre}' no existe en la planilla.")
+        raise ValueError(f"La hoja '{hoja_nombre}' no existe en la planilla de Google Sheets.")
+    except Exception as e:
+        raise ValueError(f"No se pudo acceder a la hoja '{hoja_nombre}': {e}")
 
-    df = pd.DataFrame(hoja.get_all_records())
-    
+    try:
+        df = pd.DataFrame(hoja.get_all_records())
+    except Exception as e:
+        raise ValueError(f"No se pudo leer los registros de la hoja '{hoja_nombre}': {e}")
+
     pendientes = []
     hoy = datetime.datetime.now().date()
 
-    for i, row in df.iterrows():
+    for _, row in df.iterrows():
         cliente = row.get("CLIENTE", "")
         fecha_str = row.get("PRÓXIMO CONTACTO", "")
         detalle = row.get("NOTA", "")
@@ -128,6 +133,7 @@ def obtener_recordatorios_pendientes(mail_usuario):
                     pendientes.append((cliente, codigo, fecha.strftime("%d/%m/%Y"), detalle, tipo))
             except ValueError:
                 continue
+
     return pendientes
 
 def buscar_cliente_normalizado(nombre_cliente, df_clientes):
