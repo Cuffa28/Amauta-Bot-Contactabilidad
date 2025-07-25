@@ -20,7 +20,7 @@ mapa_asesores = {
     "FA": "FACUNDO",
     "FL": "FLORENCIA",
     "AC": "AGUSTIN",
-    "R": "REGINA",
+    "RE": "REGINA",
     "JC": "JERONIMO"
 }
 
