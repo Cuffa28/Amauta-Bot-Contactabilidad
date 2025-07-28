@@ -255,7 +255,7 @@ with tabs[0]:
 
                 if len(matches) == 1:
                     _, creal, asesor = matches[0]
-                    hoja = procesar_contacto(creal, _, frase, estado, proximo, nota, extraer_datos, detectar_tipo)
+                    hoja = procesar_contacto(creal, _, frase, estado, proximo, nota, extraer_datos, lambda _: tipo_contacto)
                     guardar_en_historial(creal, hoja, frase, estado, nota, proximo)
                     st.success("✅ Registrado correctamente.")
                 else:
