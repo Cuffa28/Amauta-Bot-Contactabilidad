@@ -73,6 +73,11 @@ else:
     normalizar = drive_int.normalizar
     agregar_cliente_si_no_existe = drive_int.agregar_cliente_si_no_existe if hasattr(drive_int, 'agregar_cliente_si_no_existe') else lambda cliente, asesor: None
 
+# ✅ Cachear para evitar múltiples lecturas innecesarias
+@st.cache_data(ttl=60)
+def obtener_hoja_clientes_cached():
+    return obtener_hoja_clientes()
+
 # 🧨 POP-UP EMERGENTE DE VENCIMIENTOS HOY
 if "popup_oculto" not in st.session_state:
     st.session_state.popup_oculto = False
@@ -109,7 +114,13 @@ if vencen_hoy and not st.session_state.popup_oculto:
         st.rerun()
 
 # 🧠 Permitir a todos los usuarios escribir libremente el cliente
-df_clientes = obtener_hoja_clientes()
+
+try:
+    df_clientes = obtener_hoja_clientes_cached()
+except Exception as e:
+    st.error("❌ No se pudo acceder a la hoja de clientes. Es probable que se haya superado el límite de consultas a Google. Esperá unos segundos e intentá de nuevo.")
+    st.stop()
+
 nombres = sorted(df_clientes["CLIENTE"].dropna().unique())
 cliente_seleccionado = st.text_input("👤 Cliente (podés escribir libremente):", "", key="cliente_libre")
 
@@ -129,8 +140,6 @@ with tabs[0]:
         ["Carga guiada", "Carga rápida", "Carga múltiple"],
         horizontal=True
     )
-
-    df_clientes = obtener_hoja_clientes()
 
     def buscar_coincidencia(cliente_input):
         normal_input = normalizar(cliente_input)
