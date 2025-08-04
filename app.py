@@ -75,11 +75,14 @@ try:
     if recordatorios and "recordatorio_enviado" not in st.session_state:
         pendientes = [r for r in recordatorios if r[4] in ["pendiente", "vencido"]]
         if pendientes:
-            mensaje = "📣 Recordatorio automático:\n" + "\n".join(
-                [f"• {c} – {f}" for c, _, f, _, _ in pendientes]
-            )
-            # 💬 Cambiá este número por el tuyo (o el del usuario si lo hacés dinámico)
-            enviar_recordatorio_whatsapp("whatsapp:+5493813350000", mensaje)
+            # Podés armar dinámicamente la fecha y hora si querés
+            fecha = pendientes[0][2]  # Suponiendo que la fecha está en la columna 2
+            hora = "15:00"  # Poner un valor fijo o derivado si hace falta
+            numero = "whatsapp:+5493813350000"  # ⚠️ Reemplazar si hacés esto dinámico
+            
+            # 👇 Llamá la función con content variables
+            enviar_recordatorio_whatsapp(numero, fecha=fecha, hora=hora)
+
             st.session_state.recordatorio_enviado = True
 except Exception as e:
     st.warning(f"⚠️ No se pudo enviar el WhatsApp automático: {e}")
@@ -210,6 +213,7 @@ if st.button("Probar envío"):
         st.success(f"✅ Mensaje enviado. SID: {sid}")
     else:
         st.error("❌ Falló el envío del mensaje.")
+
 
 
 
