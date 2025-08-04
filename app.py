@@ -101,7 +101,7 @@ with tabs[0]:
 
         if st.button("Actualizar contacto", key="up_btn"):
             try:
-                registrar_contacto(frase, estado, nota, proximo, df_clientes, procesar_contacto)
+                registrar_contacto(frase, estado, nota, proximo, df_clientes, procesar_contacto, tipo_contacto)
                 st.success("✅ Registrado correctamente.")
                 st.rerun()
             except Exception as e:
@@ -177,3 +177,4 @@ with tabs[1]:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
+
