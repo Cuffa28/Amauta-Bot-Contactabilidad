@@ -195,4 +195,22 @@ with tabs[1]:
         st.success("🎉 No hay pendientes. Buen trabajo.")
 
 
+# === BLOQUE DE TESTEO DE ENVÍO WHATSAPP ===
+import streamlit as st
+from twilio_sender import enviar_recordatorio_whatsapp
+
+st.title("📲 Test de envío WhatsApp (Twilio Sandbox)")
+
+if st.button("Probar envío"):
+    numero = "whatsapp:+5493813350000"  # Asegurate que esté unido al sandbox
+    mensaje = "Hola 👋, este es un recordatorio de prueba desde Amauta Bot con Twilio."
+    sid = enviar_recordatorio_whatsapp(numero, mensaje)
+    
+    if sid:
+        st.success(f"✅ Mensaje enviado. SID: {sid}")
+    else:
+        st.error("❌ Falló el envío del mensaje.")
+        ç
+
+
 
