@@ -210,7 +210,8 @@ if st.button("Probar envío"):
         st.success(f"✅ Mensaje enviado. SID: {sid}")
     else:
         st.error("❌ Falló el envío del mensaje.")
-        ç
+
+
 
 
 
