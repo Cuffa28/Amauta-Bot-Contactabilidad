@@ -188,10 +188,11 @@ with tabs[1]:
             if cols[1].button("✔️ Hecho", key=f"recordatorio_hecho_{i}"):
                 try:
                     marcar_contacto_como_hecho(cliente, asesor)
-                    st.experimental_rerun()
+                    st.rerun()
                 except Exception as e:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
+
 
 
