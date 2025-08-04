@@ -28,7 +28,7 @@ def buscar_coincidencia(nombre_cliente, df_clientes):
 
     raise ValueError(f"No se encontró ninguna coincidencia para '{nombre_cliente}'.")
 
-def registrar_contacto(frase, estado, nota, proximo_contacto, df_clientes, procesar_fn):
+def registrar_contacto(frase, estado, nota, proximo_contacto, df_clientes, procesar_fn, tipo_forzado=None):
     try:
         cliente_input, _, _ = extraer_datos(frase)
         coincidencias = buscar_coincidencia(cliente_input, df_clientes)
@@ -37,9 +37,17 @@ def registrar_contacto(frase, estado, nota, proximo_contacto, df_clientes, proce
             raise ValueError("Cliente no claro o ambigüedad no resuelta.")
 
         _, cliente_real, asesor = coincidencias[0]
+        tipo_contacto = tipo_forzado if tipo_forzado else detectar_tipo(frase)
+
         hoja = procesar_fn(
-            cliente_real, _, frase, estado, proximo_contacto, nota,
-            extraer_datos, detectar_tipo
+            cliente_real,
+            _,
+            frase,
+            estado,
+            proximo_contacto,
+            nota,
+            extraer_datos,
+            lambda _: tipo_contacto
         )
         guardar_en_historial(cliente_real, hoja, frase, estado, nota, proximo_contacto)
         return cliente_real, hoja
@@ -60,4 +68,5 @@ def sugerir_clientes_similares(nombre_cliente, df_clientes, max_sugerencias=5):
         if normal_input in normalizar(c) or normalizar(c) in normal_input
     ]
     return sorted(sugerencias)[:max_sugerencias]
+
 
