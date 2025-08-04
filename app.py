@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from streamlit.components.v1 import html
-from twilio_sender import enviar_recordatorio_whatsapp
 import gspread
 
 import drive_utils as drive_local
@@ -178,3 +177,4 @@ with tabs[1]:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
+
