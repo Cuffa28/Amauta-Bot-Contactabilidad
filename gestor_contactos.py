@@ -28,24 +28,36 @@ def buscar_coincidencia(nombre_cliente, df_clientes):
 
     raise ValueError(f"No se encontró ninguna coincidencia para '{nombre_cliente}'.")
 
-
 def registrar_contacto(frase, estado, nota, proximo_contacto, df_clientes, procesar_fn):
-    cliente_input, _, _ = extraer_datos(frase)
-    coincidencias = buscar_coincidencia(cliente_input, df_clientes)
+    try:
+        cliente_input, _, _ = extraer_datos(frase)
+        coincidencias = buscar_coincidencia(cliente_input, df_clientes)
 
-    if len(coincidencias) != 1:
-        raise ValueError("Cliente no claro o ambigüedad no resuelta.")
+        if len(coincidencias) != 1:
+            raise ValueError("Cliente no claro o ambigüedad no resuelta.")
 
-    _, cliente_real, asesor = coincidencias[0]
-    hoja = procesar_fn(
-        cliente_real,
-        _,
-        frase,
-        estado,
-        proximo_contacto,
-        nota,
-        extraer_datos,
-        detectar_tipo
-    )
-    guardar_en_historial(cliente_real, hoja, frase, estado, nota, proximo_contacto)
-    return cliente_real, hoja
+        _, cliente_real, asesor = coincidencias[0]
+        hoja = procesar_fn(
+            cliente_real, _, frase, estado, proximo_contacto, nota,
+            extraer_datos, detectar_tipo
+        )
+        guardar_en_historial(cliente_real, hoja, frase, estado, nota, proximo_contacto)
+        return cliente_real, hoja
+
+    except ValueError as e:
+        mensaje = str(e)
+        if "no se encontró" in mensaje.lower() or "coincidencias múltiples" in mensaje.lower():
+            sugerencias = sugerir_clientes_similares(cliente_input, df_clientes)
+            if sugerencias:
+                sugerencia_texto = ", ".join(sugerencias)
+                raise ValueError(f"{mensaje}. ¿Quisiste decir: {sugerencia_texto}?")
+        raise
+
+def sugerir_clientes_similares(nombre_cliente, df_clientes, max_sugerencias=5):
+    normal_input = normalizar(nombre_cliente)
+    sugerencias = [
+        c for c in df_clientes["CLIENTE"].dropna().unique()
+        if normal_input in normalizar(c) or normalizar(c) in normal_input
+    ]
+    return sorted(sugerencias)[:max_sugerencias]
+
