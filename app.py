@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from streamlit.components.v1 import html
+from twilio_sender import enviar_recordatorio_whatsapp
 import gspread
 
 import drive_utils as drive_local
@@ -67,6 +68,21 @@ try:
 except Exception as e:
     st.error("❌ No se pudo acceder a la hoja de clientes. Esperá unos segundos e intentá de nuevo.")
     st.stop()
+
+# ✅ Enviar recordatorio automático por WhatsApp si hay pendientes
+try:
+    recordatorios = obtener_recordatorios_pendientes(st.session_state.mail_ingresado)
+    if recordatorios and "recordatorio_enviado" not in st.session_state:
+        pendientes = [r for r in recordatorios if r[4] in ["pendiente", "vencido"]]
+        if pendientes:
+            mensaje = "📣 Recordatorio automático:\n" + "\n".join(
+                [f"• {c} – {f}" for c, _, f, _, _ in pendientes]
+            )
+            # 💬 Cambiá este número por el tuyo (o el del usuario si lo hacés dinámico)
+            enviar_recordatorio_whatsapp("whatsapp:+5493813350000", mensaje)
+            st.session_state.recordatorio_enviado = True
+except Exception as e:
+    st.warning(f"⚠️ No se pudo enviar el WhatsApp automático: {e}")
 
 nombres = sorted(df_clientes["CLIENTE"].dropna().unique())
 cliente_seleccionado = st.text_input("👤 Cliente (podés escribir libremente):", "", key="cliente_libre")
@@ -177,4 +193,5 @@ with tabs[1]:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
+
 
