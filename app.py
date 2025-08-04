@@ -69,24 +69,6 @@ except Exception as e:
     st.error("❌ No se pudo acceder a la hoja de clientes. Esperá unos segundos e intentá de nuevo.")
     st.stop()
 
-# ✅ Enviar recordatorio automático por WhatsApp si hay pendientes
-try:
-    recordatorios = obtener_recordatorios_pendientes(st.session_state.mail_ingresado)
-    if recordatorios and "recordatorio_enviado" not in st.session_state:
-        pendientes = [r for r in recordatorios if r[4] in ["pendiente", "vencido"]]
-        if pendientes:
-            # Podés armar dinámicamente la fecha y hora si querés
-            fecha = pendientes[0][2]  # Suponiendo que la fecha está en la columna 2
-            hora = "15:00"  # Poner un valor fijo o derivado si hace falta
-            numero = "whatsapp:+5493813350000"  # ⚠️ Reemplazar si hacés esto dinámico
-            
-            # 👇 Llamá la función con content variables
-            enviar_recordatorio_whatsapp(numero, fecha=fecha, hora=hora)
-
-            st.session_state.recordatorio_enviado = True
-except Exception as e:
-    st.warning(f"⚠️ No se pudo enviar el WhatsApp automático: {e}")
-
 nombres = sorted(df_clientes["CLIENTE"].dropna().unique())
 cliente_seleccionado = st.text_input("👤 Cliente (podés escribir libremente):", "", key="cliente_libre")
 
@@ -213,6 +195,7 @@ if st.button("Probar envío"):
         st.success(f"✅ Mensaje enviado. SID: {sid}")
     else:
         st.error("❌ Falló el envío del mensaje.")
+
 
 
 
