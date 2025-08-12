@@ -3,12 +3,14 @@ import pandas as pd
 from datetime import datetime
 from streamlit.components.v1 import html
 import gspread
+import difflib
 
 import drive_utils as drive_local
 import drive_utils_internacional as drive_int
 
 from historial import cargar_historial_completo, formatear_historial_exportable
 from gestor_contactos import registrar_contacto
+from utils import normalizar
 
 usuarios_autorizados = [
     "facundo@amautainversiones.com",
@@ -35,6 +37,9 @@ if not st.session_state.autenticado:
             st.error("❌ No estás autorizado.")
     st.stop()
 
+# -----------------------------------------------
+# Elección de planilla (Locales / Internacionales)
+# -----------------------------------------------
 if st.session_state.mail_ingresado == "regina@amautainversiones.com":
     tipo_dato = st.radio("🌐 ¿Con qué clientes querés trabajar?", ["Locales", "Internacionales"], key="origen_datos")
     st.markdown("---")
@@ -52,26 +57,75 @@ if tipo_dato == "Locales":
     procesar_contacto = drive_local.procesar_contacto
     marcar_contacto_como_hecho = drive_local.marcar_contacto_como_hecho
     obtener_recordatorios_pendientes = drive_local.obtener_recordatorios_pendientes
+    agregar_cliente_si_no_existe = drive_local.agregar_cliente_si_no_existe
 else:
     obtener_hoja_clientes = drive_int.obtener_hoja_clientes
     procesar_contacto = drive_int.procesar_contacto
     marcar_contacto_como_hecho = drive_int.marcar_contacto_como_hecho
     obtener_recordatorios_pendientes = drive_int.obtener_recordatorios_pendientes
+    agregar_cliente_si_no_existe = drive_int.agregar_cliente_si_no_existe
 
+# ------------------- helpers --------------------
 @st.cache_data(ttl=60)
 def obtener_hoja_clientes_cached():
     return obtener_hoja_clientes()
 
+def rankear_coincidencias(query: str, universe: list[str], top_n: int = 50) -> list[str]:
+    """Devuelve las mejores coincidencias priorizando exacta, prefijo y token match.
+    Evita el "me vuelvo loco" del selectbox estándar 😉
+    """
+    if not query:
+        return universe
+    q = normalizar(query)
+
+    def score(nombre: str) -> tuple:
+        n = normalizar(nombre)
+        # pesos: exacta (1), prefijo (0.95), contiene (0.9), similitud difflib
+        if n == q:
+            return (1.0, -len(nombre))
+        if n.startswith(q):
+            return (0.95, -len(nombre))
+        if q in n:
+            return (0.90, -len(nombre))
+        # token overlap
+        q_tokens = set(q.split())
+        n_tokens = set(n.split())
+        inter = len(q_tokens & n_tokens)
+        jacc = inter / max(1, len(q_tokens | n_tokens))
+        sm = difflib.SequenceMatcher(None, q, n).ratio()
+        return (0.5 * sm + 0.5 * jacc, -len(nombre))
+
+    ordenados = sorted(universe, key=score, reverse=True)
+    # Traer exacta primero si existe
+    exactos = [n for n in ordenados if normalizar(n) == q]
+    if exactos:
+        ordenados = exactos + [n for n in ordenados if normalizar(n) != q]
+    return ordenados[:top_n]
+
 try:
     df_clientes = obtener_hoja_clientes_cached()
-except Exception as e:
+except Exception:
     st.error("❌ No se pudo acceder a la hoja de clientes. Esperá unos segundos e intentá de nuevo.")
     st.stop()
 
 nombres = sorted(df_clientes["CLIENTE"].dropna().unique())
-cliente_seleccionado = st.text_input("👤 Cliente (podés escribir libremente):", "", key="cliente_libre")
 
+# ---------------- Alta rápida de CLIENTE ----------------
 usuario_codigo = st.session_state.mail_ingresado.split("@")[0][:2].upper()
+with st.container(border=True):
+    st.markdown("**➕ Alta rápida**: escribí un cliente nuevo y guardalo directo en la hoja *CLIENTES*. Queda asignado a tu usuario.")
+    cols = st.columns([3,1])
+    nuevo_cliente = cols[0].text_input("👤 Cliente (podés escribir libremente):", value="", key="cliente_libre")
+    agregar = cols[1].button("Guardar", key="btn_alta_cliente", use_container_width=True, disabled=not nuevo_cliente.strip())
+    if agregar:
+        try:
+            agregar_cliente_si_no_existe(nuevo_cliente.strip(), usuario_codigo)
+            st.toast("✅ Cliente agregado a la hoja CLIENTES")
+            st.cache_data.clear()
+        except Exception as e:
+            st.error(f"⚠️ No se pudo agregar: {e}")
+
+# ---------------- Pestañas principales ----------------
 
 tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 
@@ -85,56 +139,73 @@ with tabs[0]:
     )
 
     if modo_carga == "Carga guiada":
+        # Autocompletado mejorado
         nombres = sorted(df_clientes["CLIENTE"].unique())
-        cliente_seleccionado = st.selectbox("👤 Cliente:", nombres, key="cg_cliente")
-        fecha_contacto = st.date_input("📅 Fecha del contacto:", format="YYYY/MM/DD", key="cg_fecha")
-        tipo_contacto = st.selectbox("📞 Tipo de contacto:", ["LLAMADA", "MENSAJES", "REUNION", "OTRO"], key="cg_tipo")
-        motivo_contacto = st.text_input("📝 Motivo:", placeholder="Ej: revisión de cartera", key="cg_motivo")
+        q = st.text_input("🔎 Buscá el cliente por nombre o parte del nombre:")
+        opciones = rankear_coincidencias(q, nombres, top_n=40) if q else nombres
+        cliente_seleccionado = st.selectbox("👤 Cliente:", opciones, key="cg_cliente")
 
-        frase = f"Se realizó una {tipo_contacto.lower()} con {cliente_seleccionado} el {fecha_contacto.strftime('%d/%m/%Y')} por {motivo_contacto.strip().lower()}"
-        estado = st.selectbox("📌 Estado:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"], key="up_estado")
-        agendar = st.radio("📅 Próximo contacto?", ["No", "Sí"], key="up_agenda")
-        proximo = ""
-        if agendar == "Sí":
-            proximo = st.date_input("🗓️ Fecha:", key="up_prox").strftime("%d/%m/%Y")
-        nota = st.text_input("🗒️ Nota:", key="up_nota")
+        with st.form("form_guiada", clear_on_submit=True):
+            fecha_contacto = st.date_input("📅 Fecha del contacto:", format="YYYY/MM/DD", key="cg_fecha")
+            tipo_contacto = st.selectbox("📞 Tipo de contacto:", ["LLAMADA", "MENSAJES", "REUNION", "OTRO"], key="cg_tipo")
+            motivo_contacto = st.text_input("📝 Motivo:", placeholder="Ej: revisión de cartera", key="cg_motivo")
+            estado = st.selectbox("📌 Estado:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"], key="up_estado")
+            agendar = st.radio("📅 Próximo contacto?", ["No", "Sí"], key="up_agenda")
+            proximo = ""
+            if agendar == "Sí":
+                proximo = st.date_input("🗓️ Fecha:", key="up_prox").strftime("%d/%m/%Y")
+            nota = st.text_input("🗒️ Nota:", key="up_nota")
+            submitted = st.form_submit_button("Actualizar contacto", use_container_width=True)
 
-        if st.button("Actualizar contacto", key="up_btn"):
+        if submitted:
             try:
+                frase = f"Se realizó una {tipo_contacto.lower()} con {cliente_seleccionado} el {fecha_contacto.strftime('%d/%m/%Y')} por {motivo_contacto.strip().lower()}"
                 registrar_contacto(frase, estado, nota, proximo, df_clientes, procesar_contacto, tipo_contacto)
-                st.success("✅ Registrado correctamente.")
+                st.success("✅ Contacto actualizado correctamente.")
+                st.toast("Contacto guardado ✔️ y formulario limpio para seguir cargando")
+                st.cache_data.clear()
                 st.rerun()
             except Exception as e:
                 st.error(f"⚠️ {e}")
 
     elif modo_carga == "Carga rápida":
         st.subheader("⚡ Carga rápida de hoy")
-        cliente_flash = st.selectbox("👤 Cliente:", nombres, key="flash_cliente")
-        tipo_flash = st.selectbox("📞 Tipo:", ["LLAMADA", "MENSAJES", "REUNION", "OTRO"], key="flash_tipo")
-        motivo_flash = st.text_input("📝 Motivo (opcional)", "seguimiento general", key="flash_motivo")
-        nota_flash = st.text_input("🗒️ Nota (opcional)", "", key="flash_nota")
+        # Autocompletado también acá
+        q2 = st.text_input("🔎 Buscar cliente:")
+        opciones2 = rankear_coincidencias(q2, nombres, top_n=40) if q2 else nombres
+        cliente_flash = st.selectbox("👤 Cliente:", opciones2, key="flash_cliente")
 
-        if st.button(f"✔️ Contacto con {cliente_flash}", key="flash_btn"):
+        with st.form("form_flash", clear_on_submit=True):
+            tipo_flash = st.selectbox("📞 Tipo:", ["LLAMADA", "MENSAJES", "REUNION", "OTRO"], key="flash_tipo")
+            motivo_flash = st.text_input("📝 Motivo (opcional)", "seguimiento general", key="flash_motivo")
+            nota_flash = st.text_input("🗒️ Nota (opcional)", "", key="flash_nota")
+            submitted_fast = st.form_submit_button(f"✔️ Contacto con {cliente_flash}")
+        
+        if submitted_fast:
             try:
                 fh = datetime.today().strftime("%d/%m/%Y")
                 frase = f"Se realizó una {tipo_flash.lower()} con {cliente_flash} el {fh} por {motivo_flash.strip().lower()}"
-                registrar_contacto(frase, "Hecho", nota_flash, "", df_clientes, procesar_contacto)
+                registrar_contacto(frase, "Hecho", nota_flash, "", df_clientes, procesar_contacto, tipo_flash)
                 st.success(f"✅ {cliente_flash} registrado.")
+                st.toast("Guardado ✔️ – listo para el siguiente")
+                st.cache_data.clear()
                 st.rerun()
             except Exception as e:
                 st.error(f"⚠️ {e}")
 
     elif modo_carga == "Carga múltiple":
         st.subheader("📥 Carga múltiple")
-        texto_masivo = st.text_area("🧾 Una frase por línea:", key="mm_texto")
-        estado_masivo = st.selectbox("📌 Estado:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"], key="mm_estado")
-        nota_masiva = st.text_input("🗒️ Nota (opcional):", key="mm_nota")
-        agendar = st.radio("📅 Agendar próximo contacto?", ["No", "Sí"], key="mm_agenda")
-        prox = ""
-        if agendar == "Sí":
-            prox = st.date_input("🗓️ Próximo contacto:", format="YYYY/MM/DD", key="mm_prox").strftime("%d/%m/%Y")
+        with st.form("form_multi", clear_on_submit=True):
+            texto_masivo = st.text_area("🧾 Una frase por línea:", key="mm_texto")
+            estado_masivo = st.selectbox("📌 Estado:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"], key="mm_estado")
+            nota_masiva = st.text_input("🗒️ Nota (opcional):", key="mm_nota")
+            agendar = st.radio("📅 Agendar próximo contacto?", ["No", "Sí"], key="mm_agenda")
+            prox = ""
+            if agendar == "Sí":
+                prox = st.date_input("🗓️ Próximo contacto:", format="YYYY/MM/DD", key="mm_prox").strftime("%d/%m/%Y")
+            submitted_multi = st.form_submit_button("📌 Cargar múltiples")
 
-        if st.button("📌 Cargar múltiples", key="mm_btn"):
+        if submitted_multi:
             exitosos, fallidos = 0, []
             for idx, l in enumerate(texto_masivo.split("\n"), start=1):
                 try:
@@ -147,6 +218,8 @@ with tabs[0]:
                 st.warning("⚠️ Fallaron:")
                 for f in fallidos:
                     st.text(f"- {f}")
+            st.toast("Carga múltiple procesada")
+            st.cache_data.clear()
             st.rerun()
 
     st.subheader("📥 Descargar historial completo")
@@ -177,4 +250,6 @@ with tabs[1]:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
+
+
 
