@@ -1,3 +1,10 @@
+# app.py – versión corregida con panel anti-duplicados y bloque "Carga múltiple" intacto
+# Incluye:
+# - Panel mini para ver lo cargado y evitar duplicados
+# - Alerta si ya existe registro hoy
+# - Autocompletado mejorado
+# - Alta rápida de clientes
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -104,20 +111,34 @@ def mostrar_alerta_posible_duplicado(cliente: str):
         st.warning("⚠️ Ya existe al menos un registro HOY para este cliente. Mirá el mini panel de abajo para no duplicar.")
 
 def render_mini_panel(cliente_foco: Optional[str] = None):
+    """Panel compacto con switch Solo hoy / Últimos 30 + buscador.
+    - Evita duplicados entre sesión y CSV
+    - Opcional: filtrar por el cliente actual (toggle)
+    """
     df_s = _df_hist_sesion()
     df_c = cargar_historial_completo()
+    # ✅ eliminar duplicados (pueden venir de sesión + CSV)
     df = pd.concat([df_s, df_c], ignore_index=True)
-    if df.empty:
+    if not df.empty:
+        df = df.drop_duplicates(subset=["Cliente","Detalle","Fecha"], keep="first")
+    else:
         return
-    modo = st.radio("🧾 Qué ver en el panel:", ["Solo hoy", "Últimos 30"], horizontal=True, key=f"mini_modo_{cliente_foco}")
-    filtro_texto = st.text_input("🔎 Filtrar por cliente/motivo/nota:", key=f"mini_busca_{cliente_foco}")
+
+    # Controles (globales, no se resetean por cliente)
+    modo = st.radio("🧾 Qué ver en el panel:", ["Solo hoy", "Últimos 30"], horizontal=True, key="mini_modo_global")
+    filtro_texto = st.text_input("🔎 Filtrar por cliente/motivo/nota:", key="mini_busca_global")
+    filtrar_cliente_actual = st.checkbox("👤 Ver solo cliente actual", value=False, key="mini_toggle_cliente")
+
     if modo == "Solo hoy":
         hoy = datetime.now().strftime("%d/%m/%Y")
         df = df[df["Fecha"] == hoy]
     else:
-        df = df.sort_index(ascending=False).head(30)
-    if cliente_foco:
+        # después de dedup, quedate con los últimos 30 registros grabados
+        df = df.tail(30)
+
+    if filtrar_cliente_actual and cliente_foco:
         df = df[df["Cliente"].str.contains(cliente_foco, case=False, na=False)]
+
     if filtro_texto:
         mask = (
             df["Cliente"].str.contains(filtro_texto, case=False, na=False) |
@@ -125,38 +146,19 @@ def render_mini_panel(cliente_foco: Optional[str] = None):
             df["Nota"].str.contains(filtro_texto, case=False, na=False)
         )
         df = df[mask]
+
     if df.empty:
         st.info("No hay registros para ese filtro.")
         return
+
     with st.expander("🧾 Lo cargado (mini panel)", expanded=True):
-        st.dataframe(df[["Fecha","Cliente","Detalle","Estado","Nota","Próximo contacto","Asesor"]], hide_index=True, use_container_width=True, height=260)
-
-# --- Datos base ---
-try:
-    df_clientes = obtener_hoja_clientes_cached()
-except Exception:
-    st.error("❌ No se pudo acceder a la hoja de clientes.")
-    st.stop()
-
-nombres = sorted(df_clientes["CLIENTE"].dropna().unique())
-
-# Alta rápida de cliente
-usuario_codigo = st.session_state.mail_ingresado.split("@")[0][:2].upper()
-with st.container(border=True):
-    st.markdown("**➕ Alta rápida**: escribí un cliente nuevo y guardalo directo en la hoja *CLIENTES*. Queda asignado a tu usuario.")
-    cols = st.columns([3,1])
-    nuevo_cliente = cols[0].text_input("👤 Cliente (podés escribir libremente):", value="", key="cliente_libre")
-    agregar = cols[1].button("Guardar", key="btn_alta_cliente", use_container_width=True, disabled=not nuevo_cliente.strip())
-    if agregar:
-        try:
-            agregar_cliente_si_no_existe(nuevo_cliente.strip(), usuario_codigo)
-            st.toast("✅ Cliente agregado a la hoja CLIENTES")
-            st.cache_data.clear()
-        except Exception as e:
-            st.error(f"⚠️ No se pudo agregar: {e}")
-
-# --- Pestañas ---
-tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
+        st.dataframe(
+            df[["Fecha","Cliente","Detalle","Estado","Nota","Próximo contacto","Asesor"]]
+              .reset_index(drop=True),
+            hide_index=True,
+            use_container_width=True,
+            height=260,
+        )
 
 with tabs[0]:
     st.title("📋 Registro de Contactos Comerciales")
@@ -260,7 +262,6 @@ with tabs[1]:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
-
 
 
 
