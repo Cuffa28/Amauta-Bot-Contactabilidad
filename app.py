@@ -1,11 +1,3 @@
-# app.py – versión completa, corregida y lista para pegar
-# Funcionalidades:
-# - Confirmación + limpieza de formularios (clear_on_submit) y toasts
-# - Autocompletado mejorado (buscador + ranking de coincidencias)
-# - Alta rápida de clientes (agrega a hoja CLIENTES con el asesor logueado)
-# - Mini panel “Lo cargado” (Solo hoy / Últimos 30) + buscador + deduplicado
-# - Selector de próximo contacto que aparece al marcar "Sí"
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -327,10 +319,3 @@ with tabs[1]:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
-
-
-
-
-
-
-
