@@ -145,15 +145,19 @@ with tabs[0]:
         opciones = rankear_coincidencias(q, nombres, top_n=40) if q else nombres
         cliente_seleccionado = st.selectbox("👤 Cliente:", opciones, key="cg_cliente")
 
+        # 👉 El selector de "Próximo contacto" VA FUERA DEL FORM para que aparezca el date picker al instante
+        agendar = st.radio("📅 Próximo contacto?", ["No", "Sí"], key="up_agenda")
+
         with st.form("form_guiada", clear_on_submit=True):
             fecha_contacto = st.date_input("📅 Fecha del contacto:", format="YYYY/MM/DD", key="cg_fecha")
             tipo_contacto = st.selectbox("📞 Tipo de contacto:", ["LLAMADA", "MENSAJES", "REUNION", "OTRO"], key="cg_tipo")
             motivo_contacto = st.text_input("📝 Motivo:", placeholder="Ej: revisión de cartera", key="cg_motivo")
             estado = st.selectbox("📌 Estado:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"], key="up_estado")
-            agendar = st.radio("📅 Próximo contacto?", ["No", "Sí"], key="up_agenda")
+
+            # Si tildaste "Sí" arriba, ahora sí mostramos el selector de fecha dentro del form
             proximo = ""
             if agendar == "Sí":
-                proximo = st.date_input("🗓️ Fecha:", key="up_prox").strftime("%d/%m/%Y")
+                proximo = st.date_input("🗓️ Fecha:", format="YYYY/MM/DD", key="up_prox").strftime("%d/%m/%Y")
             nota = st.text_input("🗒️ Nota:", key="up_nota")
             submitted = st.form_submit_button("Actualizar contacto", use_container_width=True)
 
@@ -250,6 +254,7 @@ with tabs[1]:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
+
 
 
 
