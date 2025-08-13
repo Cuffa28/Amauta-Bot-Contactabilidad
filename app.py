@@ -63,6 +63,12 @@ else:
     obtener_recordatorios_pendientes = drive_int.obtener_recordatorios_pendientes
     agregar_cliente_si_no_existe = drive_int.agregar_cliente_si_no_existe
 
+# --- Identificador del asesor actual (para filtrar mini panel/alertas) ---
+usuario_codigo_actual = st.session_state.mail_ingresado.split("@")[0][:2].upper()
+# En Locales el historial guarda el código corto (AC, JE, etc.).
+# En Internacionales podría guardar el nombre de hoja; si existe un helper, usarlo; si no, usamos el código igual.
+asesor_actual = usuario_codigo_actual
+
 # ------------------- helpers --------------------
 @st.cache_data(ttl=60)
 def obtener_hoja_clientes_cached():
@@ -104,25 +110,36 @@ def _df_hist_sesion() -> pd.DataFrame:
     return pd.DataFrame(columns=["Cliente","Detalle","Fecha","Estado","Nota","Próximo contacto","Asesor"])
 
 
-def mostrar_alerta_posible_duplicado(cliente: str):
+def mostrar_alerta_posible_duplicado(cliente: str, asesor_actual: str):
+    """Advierte si HOY ya cargaste algo para ese cliente en TU hoja (asesor)."""
     hoy = datetime.now().strftime("%d/%m/%Y")
     df = pd.concat([_df_hist_sesion(), cargar_historial_completo()], ignore_index=True)
-    if not df.empty and any((df["Cliente"].str.upper()==cliente.upper()) & (df["Fecha"]==hoy)):
-        st.warning("⚠️ Ya existe al menos un registro HOY para este cliente. Mirá el mini panel de abajo para no duplicar.")
+    if not df.empty:
+        df = df[df["Asesor"].astype(str) == str(asesor_actual)]
+    if not df.empty and any((df["Cliente"].str.upper() == cliente.upper()) & (df["Fecha"] == hoy)):
+        st.warning("⚠️ Ya tenés un registro HOY para este cliente. Mirá el mini panel para no duplicar.")
 
 
-def render_mini_panel(cliente_foco: Optional[str] = None):
-    """Panel compacto con switch Solo hoy / Últimos 30 + buscador.
-    - Evita duplicados entre sesión y CSV
-    - Toggle para ver solo el cliente actual
+def render_mini_panel(cliente_foco: Optional[str] = None, asesor_actual: Optional[str] = None):
+    """Panel con Solo hoy / Últimos 30 + buscador.
+    - MUESTRA SOLO registros del asesor logueado.
+    - Saca duplicados entre sesión y CSV.
     """
     df_s = _df_hist_sesion()
     df_c = cargar_historial_completo()
     df = pd.concat([df_s, df_c], ignore_index=True)
-    if not df.empty:
-        df = df.drop_duplicates(subset=["Cliente","Detalle","Fecha"], keep="first")
-    else:
+    if df.empty:
         return
+
+    # 🔐 Filtrar por asesor actual para no mezclar
+    if asesor_actual:
+        df = df[df["Asesor"].astype(str) == str(asesor_actual)]
+    if df.empty:
+        st.info("No hay registros propios para mostrar.")
+        return
+
+    # Quitar duplicados
+    df = df.drop_duplicates(subset=["Cliente", "Detalle", "Fecha"], keep="first")
 
     modo = st.radio("🧾 Qué ver en el panel:", ["Solo hoy", "Últimos 30"], horizontal=True, key="mini_modo_global")
     filtro_texto = st.text_input("🔎 Filtrar por cliente/motivo/nota:", key="mini_busca_global")
@@ -139,9 +156,9 @@ def render_mini_panel(cliente_foco: Optional[str] = None):
 
     if filtro_texto:
         mask = (
-            df["Cliente"].str.contains(filtro_texto, case=False, na=False) |
-            df["Detalle"].str.contains(filtro_texto, case=False, na=False) |
-            df["Nota"].str.contains(filtro_texto, case=False, na=False)
+            df["Cliente"].str.contains(filtro_texto, case=False, na=False)
+            | df["Detalle"].str.contains(filtro_texto, case=False, na=False)
+            | df["Nota"].str.contains(filtro_texto, case=False, na=False)
         )
         df = df[mask]
 
@@ -151,8 +168,7 @@ def render_mini_panel(cliente_foco: Optional[str] = None):
 
     with st.expander("🧾 Lo cargado (mini panel)", expanded=True):
         st.dataframe(
-            df[["Fecha","Cliente","Detalle","Estado","Nota","Próximo contacto","Asesor"]]
-              .reset_index(drop=True),
+            df[["Fecha", "Cliente", "Detalle", "Estado", "Nota", "Próximo contacto", "Asesor"]].reset_index(drop=True),
             hide_index=True,
             use_container_width=True,
             height=260,
@@ -168,10 +184,10 @@ except Exception:
 nombres = sorted(df_clientes["CLIENTE"].dropna().unique())
 
 # ---------------- Alta rápida de CLIENTE ----------------
-usuario_codigo = st.session_state.mail_ingresado.split("@")[0][:2].upper()
+usuario_codigo = usuario_codigo_actual  # reuso
 with st.container(border=True):
     st.markdown("**➕ Alta rápida**: escribí un cliente nuevo y guardalo directo en la hoja *CLIENTES*. Queda asignado a tu usuario.")
-    cols = st.columns([3,1])
+    cols = st.columns([3, 1])
     nuevo_cliente = cols[0].text_input("👤 Cliente (podés escribir libremente):", value="", key="cliente_libre")
     agregar = cols[1].button("Guardar", key="btn_alta_cliente", use_container_width=True, disabled=not nuevo_cliente.strip())
     if agregar:
@@ -191,7 +207,7 @@ with tabs[0]:
     modo_carga = st.radio(
         "🔀 ¿Cómo querés cargar el contacto?",
         ["Carga guiada", "Carga rápida", "Carga múltiple"],
-        horizontal=True
+        horizontal=True,
     )
 
     if modo_carga == "Carga guiada":
@@ -199,8 +215,8 @@ with tabs[0]:
         opciones = rankear_coincidencias(q, nombres, top_n=40) if q else nombres
         cliente_seleccionado = st.selectbox("👤 Cliente:", opciones, key="cg_cliente")
 
-        # Alerta anti-duplicado
-        mostrar_alerta_posible_duplicado(cliente_seleccionado)
+        # Alerta anti-duplicado (por asesor)
+        mostrar_alerta_posible_duplicado(cliente_seleccionado, asesor_actual)
 
         # Radio fuera del form para que el date picker aparezca al instante
         agendar = st.radio("📅 Próximo contacto?", ["No", "Sí"], key="up_agenda")
@@ -228,8 +244,8 @@ with tabs[0]:
             except Exception as e:
                 st.error(f"⚠️ {e}")
 
-        # Mini panel filtrado por el cliente actual (opcional con toggle)
-        render_mini_panel(cliente_seleccionado)
+        # Mini panel filtrado por el asesor actual (y opcional por cliente)
+        render_mini_panel(cliente_seleccionado, asesor_actual)
 
     elif modo_carga == "Carga rápida":
         st.subheader("⚡ Carga rápida de hoy")
@@ -237,14 +253,14 @@ with tabs[0]:
         opciones2 = rankear_coincidencias(q2, nombres, top_n=40) if q2 else nombres
         cliente_flash = st.selectbox("👤 Cliente:", opciones2, key="flash_cliente")
 
-        mostrar_alerta_posible_duplicado(cliente_flash)
+        mostrar_alerta_posible_duplicado(cliente_flash, asesor_actual)
 
         with st.form("form_flash", clear_on_submit=True):
             tipo_flash = st.selectbox("📞 Tipo:", ["LLAMADA", "MENSAJES", "REUNION", "OTRO"], key="flash_tipo")
             motivo_flash = st.text_input("📝 Motivo (opcional)", "seguimiento general", key="flash_motivo")
             nota_flash = st.text_input("🗒️ Nota (opcional)", "", key="flash_nota")
             submitted_fast = st.form_submit_button(f"✔️ Contacto con {cliente_flash}")
-        
+
         if submitted_fast:
             try:
                 fh = datetime.today().strftime("%d/%m/%Y")
@@ -257,7 +273,7 @@ with tabs[0]:
             except Exception as e:
                 st.error(f"⚠️ {e}")
 
-        render_mini_panel(cliente_flash)
+        render_mini_panel(cliente_flash, asesor_actual)
 
     elif modo_carga == "Carga múltiple":
         st.subheader("📥 Carga múltiple")
@@ -279,7 +295,7 @@ with tabs[0]:
                         nota_masiva,
                         prox,
                         df_clientes,
-                        procesar_contacto
+                        procesar_contacto,
                     )
                     exitosos += 1
                 except Exception as e:
@@ -299,7 +315,7 @@ with tabs[0]:
         data=dfout.to_csv(index=False).encode("utf-8"),
         file_name="historial_contactos.csv",
         mime="text/csv",
-        key="descarga_historial"
+        key="descarga_historial",
     )
 
 with tabs[1]:
@@ -319,6 +335,7 @@ with tabs[1]:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
+
 
 
 
