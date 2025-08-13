@@ -271,7 +271,8 @@ with tabs[0]:
 
         if st.button("📌 Cargar múltiples", key="mm_btn"):
             exitosos, fallidos = 0, []
-            for idx, l in enumerate(texto_masivo.split("\n"), start=1):
+            for idx, l in enumerate(texto_masivo.split("
+"), start=1):
                 try:
                     registrar_contacto(
                         l,
@@ -282,14 +283,14 @@ with tabs[0]:
                         procesar_contacto
                     )
                     exitosos += 1
-            except Exception as e:
-                fallidos.append(f"Línea {idx}: {e}")
-        st.success(f"✅ {exitosos} contactos cargados.")
-        if fallidos:
-            st.warning("⚠️ Fallaron:")
-            for f in fallidos:
-                st.text(f"- {f}")
-        st.rerun()
+                except Exception as e:
+                    fallidos.append(f"Línea {idx}: {e}")
+            st.success(f"✅ {exitosos} contactos cargados.")
+            if fallidos:
+                st.warning("⚠️ Fallaron:")
+                for f in fallidos:
+                    st.text(f"- {f}")
+            st.rerun()
 
     st.subheader("📥 Descargar historial completo")
     dfc = cargar_historial_completo()
@@ -319,4 +320,5 @@ with tabs[1]:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
+
 
