@@ -287,7 +287,8 @@ with tabs[0]:
 
         if st.button("📌 Cargar múltiples", key="mm_btn"):
             exitosos, fallidos = 0, []
-            for idx, l in enumerate(texto_masivo.split("\n"), start=1):
+            lineas = [l.strip() for l in texto_masivo.splitlines() if l.strip()]
+            for idx, l in enumerate(lineas, start=1):
                 try:
                     registrar_contacto(
                         l,
@@ -335,6 +336,7 @@ with tabs[1]:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
+
 
 
 
