@@ -278,20 +278,26 @@ with tabs[0]:
             prox = st.date_input("🗓️ Próximo contacto:", format="YYYY/MM/DD", key="mm_prox").strftime("%d/%m/%Y")
 
         if st.button("📌 Cargar múltiples", key="mm_btn"):
-            exitosos, fallidos = 0, []
-            for idx, l in enumerate(texto_masivo.split("
-"), start=1):
-                try:
-                    registrar_contacto(l, estado_masivo, nota_masiva, prox, df_clientes, procesar_contacto)
-                    exitosos += 1
-                except Exception as e:
-                    fallidos.append(f"Línea {idx}: {e}")
-            st.success(f"✅ {exitosos} contactos cargados.")
-            if fallidos:
-                st.warning("⚠️ Fallaron:")
-                for f in fallidos:
-                    st.text(f"- {f}")
-            st.rerun()
+    exitosos, fallidos = 0, []
+    for idx, l in enumerate(texto_masivo.split("\n"), start=1):
+        try:
+            registrar_contacto(
+                l,
+                estado_masivo,
+                nota_masiva,
+                prox,
+                df_clientes,
+                procesar_contacto
+            )
+            exitosos += 1
+        except Exception as e:
+            fallidos.append(f"Línea {idx}: {e}")
+    st.success(f"✅ {exitosos} contactos cargados.")
+    if fallidos:
+        st.warning("⚠️ Fallaron:")
+        for f in fallidos:
+            st.text(f"- {f}")
+    st.rerun()
 
     st.subheader("📥 Descargar historial completo")
     dfc = cargar_historial_completo()
@@ -321,6 +327,7 @@ with tabs[1]:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
+
 
 
 
