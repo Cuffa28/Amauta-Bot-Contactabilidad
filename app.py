@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from streamlit.components.v1 import html
-import gspread
+from typing import Optional
 import difflib
 
 import drive_utils as drive_local
@@ -12,6 +11,7 @@ from historial import cargar_historial_completo, formatear_historial_exportable
 from gestor_contactos import registrar_contacto
 from utils import normalizar
 
+# ------------------- Autenticación simple -------------------
 usuarios_autorizados = [
     "facundo@amautainversiones.com",
     "florencia@amautainversiones.com",
@@ -37,9 +37,7 @@ if not st.session_state.autenticado:
             st.error("❌ No estás autorizado.")
     st.stop()
 
-# -----------------------------------------------
-# Elección de planilla (Locales / Internacionales)
-# -----------------------------------------------
+# ---------------- Selección de planilla ----------------
 if st.session_state.mail_ingresado == "regina@amautainversiones.com":
     tipo_dato = st.radio("🌐 ¿Con qué clientes querés trabajar?", ["Locales", "Internacionales"], key="origen_datos")
     st.markdown("---")
@@ -70,24 +68,21 @@ else:
 def obtener_hoja_clientes_cached():
     return obtener_hoja_clientes()
 
+# ranking de coincidencias para el buscador
+
 def rankear_coincidencias(query: str, universe: list[str], top_n: int = 50) -> list[str]:
-    """Devuelve las mejores coincidencias priorizando exacta, prefijo y token match.
-    Evita el "me vuelvo loco" del selectbox estándar 😉
-    """
     if not query:
         return universe
     q = normalizar(query)
 
     def score(nombre: str) -> tuple:
         n = normalizar(nombre)
-        # pesos: exacta (1), prefijo (0.95), contiene (0.9), similitud difflib
         if n == q:
             return (1.0, -len(nombre))
         if n.startswith(q):
             return (0.95, -len(nombre))
         if q in n:
             return (0.90, -len(nombre))
-        # token overlap
         q_tokens = set(q.split())
         n_tokens = set(n.split())
         inter = len(q_tokens & n_tokens)
@@ -96,12 +91,68 @@ def rankear_coincidencias(query: str, universe: list[str], top_n: int = 50) -> l
         return (0.5 * sm + 0.5 * jacc, -len(nombre))
 
     ordenados = sorted(universe, key=score, reverse=True)
-    # Traer exacta primero si existe
     exactos = [n for n in ordenados if normalizar(n) == q]
     if exactos:
         ordenados = exactos + [n for n in ordenados if normalizar(n) != q]
     return ordenados[:top_n]
 
+# panel/alerta anti-duplicados
+
+def _df_hist_sesion() -> pd.DataFrame:
+    if "historial" in st.session_state and st.session_state.historial:
+        return pd.DataFrame(st.session_state.historial)
+    return pd.DataFrame(columns=["Cliente","Detalle","Fecha","Estado","Nota","Próximo contacto","Asesor"])
+
+
+def mostrar_alerta_posible_duplicado(cliente: str):
+    hoy = datetime.now().strftime("%d/%m/%Y")
+    df = pd.concat([_df_hist_sesion(), cargar_historial_completo()], ignore_index=True)
+    if not df.empty and any((df["Cliente"].str.upper()==cliente.upper()) & (df["Fecha"]==hoy)):
+        st.warning("⚠️ Ya existe al menos un registro HOY para este cliente. Mirá el mini panel de abajo para no duplicar.")
+
+
+def render_mini_panel(cliente_foco: Optional[str] = None):
+    """Panel compacto con switch Solo hoy / Últimos 30 + buscador."""
+    df_s = _df_hist_sesion()
+    df_c = cargar_historial_completo()
+    df = pd.concat([df_s, df_c], ignore_index=True)
+    if df.empty:
+        return
+
+    modo = st.radio("🧾 Qué ver en el panel:", ["Solo hoy", "Últimos 30"], horizontal=True, key="mini_modo")
+    filtro_texto = st.text_input("🔎 Filtrar por cliente/motivo/nota:", key="mini_busca")
+
+    if modo == "Solo hoy":
+        hoy = datetime.now().strftime("%d/%m/%Y")
+        df = df[df["Fecha"] == hoy]
+    else:
+        df = df.sort_index(ascending=False).head(30)
+
+    if cliente_foco:
+        df = df[df["Cliente"].str.contains(cliente_foco, case=False, na=False)]
+
+    if filtro_texto:
+        mask = (
+            df["Cliente"].str.contains(filtro_texto, case=False, na=False) |
+            df["Detalle"].str.contains(filtro_texto, case=False, na=False) |
+            df["Nota"].str.contains(filtro_texto, case=False, na=False)
+        )
+        df = df[mask]
+
+    if df.empty:
+        st.info("No hay registros para ese filtro.")
+        return
+
+    with st.expander("🧾 Lo cargado (mini panel)", expanded=True):
+        st.dataframe(
+            df[["Fecha","Cliente","Detalle","Estado","Nota","Próximo contacto","Asesor"]]
+              .reset_index(drop=True),
+            hide_index=True,
+            use_container_width=True,
+            height=260,
+        )
+
+# ------------------- Datos base --------------------
 try:
     df_clientes = obtener_hoja_clientes_cached()
 except Exception:
@@ -125,8 +176,7 @@ with st.container(border=True):
         except Exception as e:
             st.error(f"⚠️ No se pudo agregar: {e}")
 
-# ---------------- Pestañas principales ----------------
-
+# ---------------- Pestañas ----------------
 tabs = st.tabs(["📞 Cargar Contactos", "📅 Recordatorios Pendientes"])
 
 with tabs[0]:
@@ -139,13 +189,14 @@ with tabs[0]:
     )
 
     if modo_carga == "Carga guiada":
-        # Autocompletado mejorado
-        nombres = sorted(df_clientes["CLIENTE"].unique())
         q = st.text_input("🔎 Buscá el cliente por nombre o parte del nombre:")
         opciones = rankear_coincidencias(q, nombres, top_n=40) if q else nombres
         cliente_seleccionado = st.selectbox("👤 Cliente:", opciones, key="cg_cliente")
 
-        # 👉 El selector de "Próximo contacto" VA FUERA DEL FORM para que aparezca el date picker al instante
+        # Alerta anti-duplicado
+        mostrar_alerta_posible_duplicado(cliente_seleccionado)
+
+        # Radio fuera del form para que el date picker aparezca al instante
         agendar = st.radio("📅 Próximo contacto?", ["No", "Sí"], key="up_agenda")
 
         with st.form("form_guiada", clear_on_submit=True):
@@ -154,7 +205,6 @@ with tabs[0]:
             motivo_contacto = st.text_input("📝 Motivo:", placeholder="Ej: revisión de cartera", key="cg_motivo")
             estado = st.selectbox("📌 Estado:", ["En curso", "Hecho", "REUNION", "Respuesta positiva"], key="up_estado")
 
-            # Si tildaste "Sí" arriba, ahora sí mostramos el selector de fecha dentro del form
             proximo = ""
             if agendar == "Sí":
                 proximo = st.date_input("🗓️ Fecha:", format="YYYY/MM/DD", key="up_prox").strftime("%d/%m/%Y")
@@ -166,18 +216,22 @@ with tabs[0]:
                 frase = f"Se realizó una {tipo_contacto.lower()} con {cliente_seleccionado} el {fecha_contacto.strftime('%d/%m/%Y')} por {motivo_contacto.strip().lower()}"
                 registrar_contacto(frase, estado, nota, proximo, df_clientes, procesar_contacto, tipo_contacto)
                 st.success("✅ Contacto actualizado correctamente.")
-                st.toast("Contacto guardado ✔️ y formulario limpio para seguir cargando")
+                st.toast("Guardado ✔️ – formulario limpio para seguir cargando")
                 st.cache_data.clear()
                 st.rerun()
             except Exception as e:
                 st.error(f"⚠️ {e}")
 
+        # Mini panel filtrado por el cliente actual
+        render_mini_panel(cliente_seleccionado)
+
     elif modo_carga == "Carga rápida":
         st.subheader("⚡ Carga rápida de hoy")
-        # Autocompletado también acá
         q2 = st.text_input("🔎 Buscar cliente:")
         opciones2 = rankear_coincidencias(q2, nombres, top_n=40) if q2 else nombres
         cliente_flash = st.selectbox("👤 Cliente:", opciones2, key="flash_cliente")
+
+        mostrar_alerta_posible_duplicado(cliente_flash)
 
         with st.form("form_flash", clear_on_submit=True):
             tipo_flash = st.selectbox("📞 Tipo:", ["LLAMADA", "MENSAJES", "REUNION", "OTRO"], key="flash_tipo")
@@ -197,6 +251,8 @@ with tabs[0]:
             except Exception as e:
                 st.error(f"⚠️ {e}")
 
+        render_mini_panel(cliente_flash)
+
     elif modo_carga == "Carga múltiple":
         st.subheader("📥 Carga múltiple")
         with st.form("form_multi", clear_on_submit=True):
@@ -211,7 +267,8 @@ with tabs[0]:
 
         if submitted_multi:
             exitosos, fallidos = 0, []
-            for idx, l in enumerate(texto_masivo.split("\n"), start=1):
+            for idx, l in enumerate(texto_masivo.split("
+"), start=1):
                 try:
                     registrar_contacto(l, estado_masivo, nota_masiva, prox, df_clientes, procesar_contacto)
                     exitosos += 1
