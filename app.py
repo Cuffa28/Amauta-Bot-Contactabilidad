@@ -71,6 +71,18 @@ usuarios_autorizados = [
     "julieta@amautainversiones.com"
 ]
 
+def codigo_asesor_from_email(email: str) -> str:
+    usuario = email.split("@")[0].lower()
+    mapeo = {
+        "facundo":  "FA",
+        "florencia": "FL",
+        "agustin":  "AC",
+        "regina":   "R",
+        "jeronimo": "JC",
+        "julieta":  "JL",
+    }
+    return mapeo.get(usuario, usuario[:2].upper())
+
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
 
@@ -114,9 +126,9 @@ else:
     agregar_cliente_si_no_existe = drive_int.agregar_cliente_si_no_existe
 
 # --- Identificador del asesor actual (para filtrar mini panel/alertas) ---
-usuario_codigo_actual = st.session_state.mail_ingresado.split("@")[0][:2].upper()
-# En Locales el historial guarda el código corto (AC, JE, etc.).
-# En Internacionales podría guardar el nombre de hoja; si existe un helper, usarlo; si no, usamos el código igual.
+usuario_codigo_actual = codigo_asesor_from_email(st.session_state.mail_ingresado)
+# En Locales el historial guarda el código corto (FA, FL, AC, RE, JC, etc.).
+# En Internacionales podría guardar el nombre de hoja; si cambia, mapeá acá.
 asesor_actual = usuario_codigo_actual
 
 # ------------------- helpers --------------------
@@ -413,7 +425,16 @@ with tabs[0]:
 
 with tabs[1]:
     st.title("📅 Recordatorios Pendientes")
-    recs = obtener_recordatorios_pendientes(st.session_state.mail_ingresado)
+    codigo = codigo_asesor_from_email(st.session_state.mail_ingresado)
+    try:
+        recs = obtener_recordatorios_pendientes(codigo)
+    except ValueError as e:
+        st.info(f"ℹ️ No se encontró hoja asignada para tu código **{codigo}**. Avisá al admin o ajustá el mapeo en el código.")
+        recs = []
+    except Exception as e:
+        st.error(f"⚠️ No se pudieron cargar recordatorios: {e}")
+        recs = []
+
     if recs:
         st.subheader("📣 Contactos a seguir")
         for i, (cliente, asesor, fecha, det, tp) in enumerate(recs):
@@ -428,5 +449,7 @@ with tabs[1]:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
+
+
 
 
