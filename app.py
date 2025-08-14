@@ -357,7 +357,7 @@ with tabs[0]:
         render_mini_panel(cliente_seleccionado, asesor_actual, key_prefix="panel_guiada")
     elif modo_carga == "Carga múltiple":
         st.subheader("📥 Carga múltiple (sin escribir)")
-        st.caption("Elegí la cantidad de contactos, completá cada fila con menús y listo. La fecha se toma **hoy** automáticamente.")
+        st.caption("Elegí la cantidad de contactos, completá cada fila con menús. La fecha es **hoy** automáticamente.")
 
         # Configuración global de la tanda
         hoy_str = datetime.today().strftime("%d/%m/%Y")
@@ -380,7 +380,8 @@ with tabs[0]:
         tipos = ["LLAMADA", "MENSAJES", "REUNION", "OTRO"]
         estados = ["En curso", "Hecho", "REUNION", "Respuesta positiva"]
 
-        with st.form("form_multiple_menus", clear_on_submit=True):
+        # 🔒 Importante: no limpiamos automáticamente al enviar para que ENTER no te borre lo cargado
+        with st.form("form_multiple_menus", clear_on_submit=False):
             filas = []
             for i in range(int(cantidad)):
                 st.markdown(f"**Contacto #{i+1}**")
@@ -409,15 +410,29 @@ with tabs[0]:
             submitted_multi = st.form_submit_button("📌 Cargar todos", use_container_width=True)
 
         if submitted_multi:
+            # ✅ Validaciones: si alguien toca ENTER, no procesamos hasta que esté completo
+            errores = []
+            for idx, row in enumerate(filas, start=1):
+                if not row["cliente"]:
+                    errores.append(f"Fila {idx}: seleccioná cliente")
+                if (row["motivo"] == "Otro" and not (row["motivo_txt"] or "").strip()):
+                    errores.append(f"Fila {idx}: escribí el detalle del motivo")
+            if errores:
+                st.warning("⚠️ Revisá estas filas antes de guardar:")
+                for e in errores:
+                    st.text(f"- {e}")
+                st.stop()
+
             exitosos, fallidos = 0, []
             for idx, row in enumerate(filas, start=1):
                 try:
-                    motivo_final = row["motivo_txt"].strip() if row["motivo"] == "Otro" and row["motivo_txt"].strip() else row["motivo"]
+                    motivo_final = row["motivo_txt"].strip() if row["motivo"] == "Otro" and row["motivo_txt"] else row["motivo"]
+                    nota_final = (row["nota"] or "").strip()  # nunca mandamos la palabra 'Notas'
                     frase = f"Se realizó una {row['tipo'].lower()} con {row['cliente']} el {hoy_str} por {motivo_final.lower()}"
                     registrar_contacto(
                         frase,
                         row["estado"],
-                        row["nota"],
+                        nota_final,
                         proximo_global,
                         df_clientes,
                         procesar_contacto,
@@ -431,6 +446,11 @@ with tabs[0]:
                 st.warning("⚠️ Revisar filas con error:")
                 for f in fallidos:
                     st.text(f"- {f}")
+            # 🧽 Limpieza manual de campos de texto para la próxima tanda
+            for i in range(int(cantidad)):
+                for k in (f"mm2_busca_{i}", f"mm2_motivo_txt_{i}", f"mm2_nota_{i}"):
+                    if k in st.session_state:
+                        st.session_state[k] = ""
             st.cache_data.clear()
             st.rerun()
 
@@ -471,6 +491,7 @@ with tabs[1]:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
+
 
 
 
