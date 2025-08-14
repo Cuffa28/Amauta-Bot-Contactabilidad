@@ -185,11 +185,16 @@ def mostrar_alerta_posible_duplicado(cliente: str, asesor_actual: str):
         st.warning("⚠️ Ya tenés un registro HOY para este cliente. Mirá el mini panel para no duplicar.")
 
 
-def render_mini_panel(cliente_foco: Optional[str] = None, asesor_actual: Optional[str] = None):
+def render_mini_panel(
+    cliente_foco: Optional[str] = None,
+    asesor_actual: Optional[str] = None,
+    key_prefix: str = "mini",
+):
     """Panel con Solo hoy / Últimos 30 + buscador.
     - Muestra registros por asesor con un SELECTOR visible.
     - Si el código de asesor no coincide, podés elegir manualmente cuál ver.
     - Saca duplicados entre sesión y CSV.
+    - Usa claves únicas por instancia (key_prefix) para evitar StreamlitDuplicateElementKey.
     """
     df_s = _df_hist_sesion()
     df_c = cargar_historial_completo()
@@ -218,52 +223,19 @@ def render_mini_panel(cliente_foco: Optional[str] = None, asesor_actual: Optiona
 
     if asesores_disponibles:
         sel_asesor = st.selectbox(
-            "👤 Asesor a mostrar:", asesores_disponibles, index=idx_def, key="mini_sel_asesor"
+            "👤 Asesor a mostrar:", asesores_disponibles, index=idx_def, key=f"{key_prefix}_sel_asesor"
         )
         df = df[df["Asesor"].astype(str).str.strip() == sel_asesor]
     else:
         st.info("No hay columna 'Asesor' o está vacía en el historial.")
         return
 
-    # Controles del panel
+    # Controles del panel (con keys únicas)
     modo = st.radio(
-        "🧾 Qué ver en el panel:", ["Solo hoy", "Últimos 30"], horizontal=True, key="mini_modo_global"
+        "🧾 Qué ver en el panel:", ["Solo hoy", "Últimos 30"], horizontal=True, key=f"{key_prefix}_modo"
     )
-    filtro_texto = st.text_input("🔎 Filtrar por cliente/motivo/nota:", key="mini_busca_global")
-    filtrar_cliente_actual = st.checkbox("👤 Ver solo cliente actual", value=False, key="mini_toggle_cliente")
-
-    if modo == "Solo hoy":
-        hoy = datetime.now().strftime("%d/%m/%Y")
-        df = df[df["Fecha"] == hoy]
-    else:
-        df = df.tail(30)
-
-    if filtrar_cliente_actual and cliente_foco:
-        df = df[df["Cliente"].str.contains(cliente_foco, case=False, na=False)]
-
-    if filtro_texto:
-        mask = (
-            df["Cliente"].str.contains(filtro_texto, case=False, na=False)
-            | df["Detalle"].str.contains(filtro_texto, case=False, na=False)
-            | df["Nota"].str.contains(filtro_texto, case=False, na=False)
-        )
-        df = df[mask]
-
-    if df.empty:
-        st.info("No hay registros para ese filtro.")
-        return
-
-    with st.expander("🧾 Lo cargado (mini panel)", expanded=True):
-        st.dataframe(
-            df[["Fecha", "Cliente", "Detalle", "Estado", "Nota", "Próximo contacto", "Asesor"]].reset_index(drop=True),
-            hide_index=True,
-            use_container_width=True,
-            height=260,
-        )
-
-    modo = st.radio("🧾 Qué ver en el panel:", ["Solo hoy", "Últimos 30"], horizontal=True, key="mini_modo_global")
-    filtro_texto = st.text_input("🔎 Filtrar por cliente/motivo/nota:", key="mini_busca_global")
-    filtrar_cliente_actual = st.checkbox("👤 Ver solo cliente actual", value=False, key="mini_toggle_cliente")
+    filtro_texto = st.text_input("🔎 Filtrar por cliente/motivo/nota:", key=f"{key_prefix}_busca")
+    filtrar_cliente_actual = st.checkbox("👤 Ver solo cliente actual", value=False, key=f"{key_prefix}_toggle")
 
     if modo == "Solo hoy":
         hoy = datetime.now().strftime("%d/%m/%Y")
@@ -365,7 +337,7 @@ with tabs[0]:
                 st.error(f"⚠️ {e}")
 
         # Mini panel filtrado por el asesor actual (y opcional por cliente)
-        render_mini_panel(cliente_seleccionado, asesor_actual)
+        render_mini_panel(cliente_seleccionado, asesor_actual, key_prefix="panel_guiada")
 
     elif modo_carga == "Carga rápida":
         st.subheader("⚡ Carga rápida de hoy")
@@ -393,7 +365,7 @@ with tabs[0]:
             except Exception as e:
                 st.error(f"⚠️ {e}")
 
-        render_mini_panel(cliente_flash, asesor_actual)
+        render_mini_panel(cliente_flash, asesor_actual, key_prefix="panel_rapida")
 
     elif modo_carga == "Carga múltiple":
         st.subheader("📥 Carga múltiple")
@@ -456,3 +428,5 @@ with tabs[1]:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
+
+
