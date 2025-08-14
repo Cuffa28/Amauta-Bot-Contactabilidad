@@ -20,7 +20,7 @@ mapa_asesores = {
     "FA": "FACUNDO",
     "FL": "FLORENCIA",
     "AC": "AGUSTIN",
-    "RE": "REGINA",
+    "R": "REGINA",
     "JC": "JERONIMO"
 }
 
@@ -189,4 +189,5 @@ def agregar_cliente_si_no_existe(nombre_cliente, asesor):
         return  # Ya existe
 
     hoja.append_row([nombre_cliente, asesor])
+
 
