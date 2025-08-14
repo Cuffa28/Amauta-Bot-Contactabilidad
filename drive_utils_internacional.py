@@ -20,7 +20,7 @@ SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 # Solo JULIETA y REGINA como asesoras internacionales
 mapa_asesores = {
     "JU": "JULIETA",
-    "RE": "REGINA"
+    "R": "REGINA"
 }
 
 client = None
@@ -175,4 +175,5 @@ def agregar_cliente_si_no_existe(nombre_cliente, asesor):
         return  # Ya existe
 
     hoja.append_row([nombre_cliente, asesor])
+
 
