@@ -286,6 +286,11 @@ def render_mini_panel(
 # ------------------- Datos base --------------------
 try:
     df_clientes = obtener_hoja_clientes_cached()
+
+    # 🔁 Combinar clientes agregados en esta sesión (sin esperar a cache)
+    if "df_clientes_extra" in st.session_state:
+        df_extra = pd.DataFrame({"CLIENTE": st.session_state.df_clientes_extra})
+        df_clientes = pd.concat([df_clientes, df_extra], ignore_index=True).drop_duplicates(subset=["CLIENTE"])
 except Exception:
     st.error("❌ No se pudo acceder a la hoja de clientes. Esperá unos segundos e intentá de nuevo.")
     st.stop()
@@ -299,11 +304,19 @@ with st.container(border=True):
     cols = st.columns([3, 1])
     nuevo_cliente = cols[0].text_input("👤 Cliente (podés escribir libremente):", value="", key="cliente_libre")
     agregar = cols[1].button("Guardar", key="btn_alta_cliente", use_container_width=True, disabled=not nuevo_cliente.strip())
+    
     if agregar:
         try:
-            agregar_cliente_si_no_existe(nuevo_cliente.strip(), usuario_codigo)
+            nombre_nuevo = nuevo_cliente.strip()
+            agregar_cliente_si_no_existe(nombre_nuevo, usuario_codigo)
             st.toast("✅ Cliente agregado a la hoja CLIENTES")
-            st.cache_data.clear()
+
+            # 🔁 ACTUALIZAR df_clientes en memoria (session_state)
+            if "df_clientes_extra" not in st.session_state:
+                st.session_state.df_clientes_extra = []
+            st.session_state.df_clientes_extra.append(nombre_nuevo)
+
+            st.cache_data.clear()  # limpia cache para próxima carga real
         except Exception as e:
             st.error(f"⚠️ No se pudo agregar: {e}")
 
@@ -491,6 +504,7 @@ with tabs[1]:
                     st.error(f"⚠️ {e}")
     else:
         st.success("🎉 No hay pendientes. Buen trabajo.")
+
 
 
 
